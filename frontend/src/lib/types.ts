@@ -245,11 +245,25 @@ export interface CreateTicketPayload {
   attachmentSize?: string | null;
 }
 
-export interface LiveEvent {
-  type: string;
+interface LiveEventBase {
   ticketId?: string;
   ticketPublicId?: string;
   authorId?: string;
-  data?: unknown;
   at?: string;
 }
+
+export type LiveEvent = LiveEventBase & (
+  | {
+      type: 'ticket.message';
+      data: {
+        message: Message;
+        status: TicketStatus;
+        firstResponseAt: string | null;
+        lastMessageAt: string;
+      };
+    }
+  | {
+      type: 'connected' | 'ticket.created' | 'ticket.updated' | 'ticket.closed' | 'heartbeat';
+      data?: unknown;
+    }
+);

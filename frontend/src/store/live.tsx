@@ -28,7 +28,12 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    if (event.type === 'ticket.message' && user?.role === 'AUTHOR') {
+    if (
+      event.type === 'ticket.message' &&
+      user?.role === 'AUTHOR' &&
+      event.data?.message?.role === 'ADMIN' &&
+      !event.data.message.isInternal
+    ) {
       push('BookLeaf replied to your ticket', 'info');
     }
   });

@@ -153,7 +153,7 @@ export const AdminQueuePage = () => {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-ai-border bg-ai-soft px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-ai-deep">
+            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-ai-deep">
               Mission control
             </span>
             <span className="inline-flex items-center gap-1.5 text-[10px] text-[#64748b]">
@@ -204,7 +204,7 @@ export const AdminQueuePage = () => {
           label="Avg first response"
           value={statsLoading ? '—' : `${stats?.avgFirstResponseMinutes ?? 0}m`}
           trailing={
-            <span className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]">
+            <span className="text-[11px] text-[#64748b]">
               {stats?.percentages.resolvedRate ?? 0}% resolved
             </span>
           }
@@ -223,7 +223,7 @@ export const AdminQueuePage = () => {
           accent="text-ai-deep"
           hint="Share of tickets routed automatically"
           trailing={
-            <span className="inline-flex items-center gap-1 rounded-full border border-ai-border bg-ai-soft px-2 py-0.5 text-[10px] font-bold text-ai-deep">
+            <span className="inline-flex items-center gap-1 text-[11px] text-ai-deep">
               <Icon name="auto_awesome" className="text-[11px]" /> AI
             </span>
           }
@@ -236,7 +236,7 @@ export const AdminQueuePage = () => {
             stats ? `${stats.ai.calls} calls · ${stats.ai.tokens.toLocaleString('en-IN')} tokens` : 'Token telemetry'
           }
           trailing={
-            <span className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]">
+            <span className="text-[11px] text-[#64748b]">
               {stats?.percentages.fallbackRate ?? 0}% fallback
             </span>
           }

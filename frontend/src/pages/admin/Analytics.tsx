@@ -106,7 +106,7 @@ export const AnalyticsPage = () => {
               <h2 className="text-headline-sm text-ink">Category mix</h2>
               <p className="text-body-sm text-[#64748b]">Where author demand is concentrated.</p>
             </div>
-            <span className="rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]">
+            <span className="text-[11px] text-[#64748b]">
               All time
             </span>
           </div>
@@ -141,7 +141,7 @@ export const AnalyticsPage = () => {
               <h2 className="text-headline-sm text-ink">Priority &amp; queue health</h2>
               <p className="text-body-sm text-[#64748b]">AI scoring distribution and SLA exposure.</p>
             </div>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#FECACA] bg-danger-soft px-2 py-0.5 text-[10px] font-semibold text-danger-deep">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-danger-deep">
               <Icon name="alarm" className="text-[11px]" /> {stats.totals.overdueCount} overdue
             </span>
           </div>
@@ -212,7 +212,7 @@ export const AnalyticsPage = () => {
                 Every call is logged server-side. No prompt or API key is exposed to the browser.
               </p>
             </div>
-            <span className="rounded-full border border-ai-border bg-ai-soft px-2 py-0.5 text-[10px] font-semibold text-ai-deep">
+            <span className="text-[11px] text-ai-deep">
               {stats.ai.byOperation.CLASSIFY} classify · {stats.ai.byOperation.DRAFT} drafts
             </span>
           </div>

@@ -7,7 +7,7 @@ import { useAuth } from '../../store/auth';
 import { useToast } from '../../store/toast';
 import { BookCover } from '../../components/BookCover';
 import { Icon } from '../../components/Icon';
-import { Card, ErrorState, Pill } from '../../components/ui';
+import { Card, ErrorState } from '../../components/ui';
 import {
   CATEGORY_ICONS,
   CATEGORY_LABELS,
@@ -144,10 +144,6 @@ export const NewTicketPage = () => {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-label-sm font-semibold uppercase tracking-[0.14em] text-primary">Support desk</span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-semibold text-[#047857]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#059669]" />
-              Desk active
-            </span>
           </div>
           <h1 className="mt-1.5 text-[2rem] font-bold leading-tight tracking-[-0.03em] text-ink">
             Raise a support query
@@ -310,7 +306,7 @@ export const NewTicketPage = () => {
               <div className="flex items-center gap-2">
                 <Icon name="auto_awesome" className="text-[18px] text-ai" />
                 <h3 className="text-label-md font-semibold text-ink">Query topic</h3>
-                <span className="rounded-full border border-ai-border bg-ai-soft px-2 py-0.5 text-[10px] font-semibold text-ai-deep">
+                <span className="text-[11px] text-ai-deep">
                   AI auto-classification
                 </span>
               </div>
@@ -319,7 +315,7 @@ export const NewTicketPage = () => {
                   type="button"
                   onClick={() => setCategory('AUTO')}
                   className={clsx(
-                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
+                    'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
                     category === 'AUTO'
                       ? 'border-ai bg-ai text-white'
                       : 'border-[#E2E8F0] bg-white text-[#475569] hover:border-ai-border hover:bg-ai-soft',
@@ -334,7 +330,7 @@ export const NewTicketPage = () => {
                     type="button"
                     onClick={() => setCategory(value)}
                     className={clsx(
-                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
+                      'inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[11px] font-semibold transition-colors',
                       category === value
                         ? 'border-primary bg-primary text-white'
                         : 'border-[#E2E8F0] bg-white text-[#475569] hover:border-[#CBD5E1] hover:bg-[#F8FAFC]',
@@ -498,10 +494,6 @@ export const NewTicketPage = () => {
               Every ticket gets a human review. Critical revenue or catalogue-integrity issues are escalated with a
               48-hour resolution target.
             </p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              <Pill className="border-[#A7F3D0] bg-white/70 text-[#047857] !text-[9px]">Human reviewed</Pill>
-              <Pill className="border-[#A7F3D0] bg-white/70 text-[#047857] !text-[9px]">Policy grounded</Pill>
-            </div>
           </div>
         </aside>
       </form>

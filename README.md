@@ -22,6 +22,8 @@ dataset (10 authors, 18 books) and the BookLeaf knowledge base.
   (auto or manual), attachment (UI-only, metadata stored), live AI triage feedback.
 - **My Tickets** and ticket detail: full conversation, live updates over SSE without a refresh,
   reply as author, close/resolve handshake, SLA state.
+- **Need a quick answer?**: expand common questions on the dashboard to read knowledge-base
+  answers inline. **Open a new query** remains available for individual support.
 
 **Operations portal**
 
@@ -111,6 +113,11 @@ Vite proxies `/api` to `http://localhost:4000`. For a split deployment set
 frontend origin to `CLIENT_ORIGIN` on the API.
 
 ### Demo accounts — password `bookleaf123`
+
+The sign-in page opens with an empty author login form. Enter an author account below to
+open the author desk, or choose **Admin login** beneath the form to sign in as an operations
+team member. Use **Back to author login** to return. Demo credentials are documented here
+and are not displayed or prefilled in the application.
 
 | Role | Email | Notes |
 | --- | --- | --- |
@@ -244,6 +251,21 @@ cd backend
 npm test          # 7 tests: heuristics, AI JSON parsing, invalid-AI fallback, draft cost, template fallback
 npm run typecheck
 ```
+
+Frontend browser checks use isolated API fixtures and simulated live messages; they do not
+modify the development database:
+
+```bash
+cd frontend
+npx playwright install chromium
+npm test
+npm run build
+```
+
+The browser suite covers separate author/admin login, role mismatches, inline quick answers
+on desktop and mobile, and author/admin reply notifications. To use an installed Chrome
+instead, set `PLAYWRIGHT_CHANNEL=chrome` (`$env:PLAYWRIGHT_CHANNEL = 'chrome'` in PowerShell)
+before running `npm test`.
 
 ---
 

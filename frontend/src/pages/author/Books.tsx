@@ -324,7 +324,7 @@ export const BooksPage = () => {
                           ) : null}
                         </div>
                       </div>
-                      <span className="rounded-full border border-[#E2E8F0] bg-white px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#64748b]">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-[#64748b]">
                         Paperback
                       </span>
                     </div>

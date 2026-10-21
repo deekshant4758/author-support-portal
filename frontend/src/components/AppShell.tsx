@@ -37,15 +37,15 @@ const Logo = () => (
 
 const LiveChip = ({ status }: { status: 'connecting' | 'live' | 'offline' }) => {
   const config = {
-    live: { label: 'Live sync', dot: 'bg-[#059669]', className: 'bg-[#ECFDF5] text-[#047857]' },
-    connecting: { label: 'Connecting', dot: 'bg-[#F59E0B]', className: 'bg-[#FFFBEB] text-[#B45309]' },
-    offline: { label: 'Reconnecting', dot: 'bg-[#94A3B8]', className: 'bg-[#F1F5F9] text-[#475569]' },
+    live: { label: 'Live sync', dot: 'bg-[#059669]', className: 'text-[#047857]' },
+    connecting: { label: 'Connecting', dot: 'bg-[#F59E0B]', className: 'text-[#B45309]' },
+    offline: { label: 'Reconnecting', dot: 'bg-[#94A3B8]', className: 'text-[#475569]' },
   }[status];
 
   return (
     <span
       className={clsx(
-        'hidden items-center gap-1.5 rounded-full px-2.5 py-1 text-label-sm font-semibold sm:inline-flex',
+        'hidden items-center gap-1.5 text-label-sm sm:inline-flex',
         config.className,
       )}
       title={status === 'live' ? 'Real-time updates connected' : 'Real-time updates are reconnecting'}

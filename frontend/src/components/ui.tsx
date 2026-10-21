@@ -5,10 +5,8 @@ import { Icon } from './Icon';
 import {
   CATEGORY_ICONS,
   CATEGORY_LABELS,
-  CATEGORY_TONES,
   PRIORITY_DOTS,
   PRIORITY_LABELS,
-  PRIORITY_TONES,
   STATUS_DOTS,
   STATUS_LABELS,
   STATUS_TONES,
@@ -49,6 +47,25 @@ export const StatusPill = ({ status, className }: { status: TicketStatus; classN
   </Pill>
 );
 
+// Secondary ticket metadata reads as text so status remains the primary badge.
+const MetadataLabel = ({
+  children,
+  className,
+  dot,
+  icon,
+}: {
+  children: ReactNode;
+  className?: string;
+  dot?: string;
+  icon?: string;
+}) => (
+  <span className={clsx('inline-flex items-center gap-1.5 text-label-sm text-[#64748b]', className)}>
+    {dot ? <span className={clsx('h-1.5 w-1.5 shrink-0 rounded-full', dot)} /> : null}
+    {icon ? <Icon name={icon} className="shrink-0 text-[14px]" /> : null}
+    {children}
+  </span>
+);
+
 export const PriorityPill = ({
   priority,
   className,
@@ -58,9 +75,19 @@ export const PriorityPill = ({
   className?: string;
   showDot?: boolean;
 }) => (
-  <Pill className={clsx(PRIORITY_TONES[priority], className)} dot={showDot ? PRIORITY_DOTS[priority] : undefined}>
+  <MetadataLabel
+    className={clsx(
+      priority === 'CRITICAL'
+        ? '!text-danger-deep font-semibold'
+        : priority === 'HIGH'
+          ? '!text-[#C2410C] font-semibold'
+          : '',
+      className,
+    )}
+    dot={showDot ? PRIORITY_DOTS[priority] : undefined}
+  >
     {PRIORITY_LABELS[priority]}
-  </Pill>
+  </MetadataLabel>
 );
 
 export const CategoryPill = ({
@@ -72,9 +99,9 @@ export const CategoryPill = ({
   className?: string;
   iconOnly?: boolean;
 }) => (
-  <Pill className={clsx(CATEGORY_TONES[category], className)} icon={CATEGORY_ICONS[category]}>
+  <MetadataLabel className={className} icon={CATEGORY_ICONS[category]}>
     {iconOnly ? null : CATEGORY_LABELS[category]}
-  </Pill>
+  </MetadataLabel>
 );
 
 export const SourcePill = ({
@@ -84,38 +111,37 @@ export const SourcePill = ({
   source: TriageSource;
   confidence?: number | null;
 }) => {
-  const config: Record<TriageSource, { label: string; className: string; icon: string }> = {
-    AI: { label: 'AI', className: 'bg-ai-soft text-ai-deep border-ai-border', icon: 'auto_awesome' },
+  const config: Record<TriageSource, { label: string; icon: string }> = {
+    AI: { label: 'AI', icon: 'auto_awesome' },
     HEURISTIC: {
       label: 'Rule engine',
-      className: 'bg-[#F1F5F9] text-[#475569] border-[#E2E8F0]',
       icon: 'rule',
     },
-    ADMIN: { label: 'Manual', className: 'bg-[#FFFBEB] text-[#B45309] border-[#FDE68A]', icon: 'edit' },
-    AUTHOR: { label: 'Author pick', className: 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]', icon: 'person' },
+    ADMIN: { label: 'Manual', icon: 'edit' },
+    AUTHOR: { label: 'Author pick', icon: 'person' },
   };
   const item = config[source] ?? config.HEURISTIC;
   return (
-    <Pill className={item.className} icon={item.icon}>
+    <MetadataLabel icon={item.icon}>
       {item.label}
       {confidence != null ? ` · ${Math.round(confidence * 100)}%` : ''}
-    </Pill>
+    </MetadataLabel>
   );
 };
 
 export const SlaPill = ({ minutes, breached }: { minutes: number; breached: boolean }) => (
-  <Pill
+  <MetadataLabel
     className={clsx(
       breached
-        ? 'border-danger-border bg-danger-soft text-danger-deep'
+        ? '!text-danger-deep font-semibold'
         : minutes < 120
-          ? 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]'
-          : 'border-[#E2E8F0] bg-[#F8FAFC] text-[#475569]',
+          ? '!text-[#B45309]'
+          : '',
     )}
     icon={breached ? 'alarm' : 'schedule'}
   >
     {slaText(minutes, breached)}
-  </Pill>
+  </MetadataLabel>
 );
 
 /* ------------------------------------------------------------------ layout */

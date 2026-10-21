@@ -9,13 +9,13 @@ import {
 } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, tokenStore } from '../lib/api';
+import { api, ApiError, tokenStore } from '../lib/api';
 import type { Role, User } from '../lib/types';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string, role: Role) => Promise<User>;
   logout: () => void;
   refresh: () => Promise<void>;
 }
@@ -49,8 +49,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     void refresh();
   }, [refresh]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, role: Role) => {
     const result = await api.auth.login(email.trim(), password);
+    if (result.user.role !== role) {
+      throw new ApiError(
+        403,
+        'ROLE_MISMATCH',
+        `Please use ${result.user.role === 'ADMIN' ? 'Admin login' : 'author login'} for this account.`,
+      );
+    }
     tokenStore.set(result.token);
     setUser(result.user);
     return result.user;

@@ -5,29 +5,13 @@ import { homeFor, useAuth } from '../store/auth';
 import { Icon } from '../components/Icon';
 import { BookCover } from '../components/BookCover';
 
-const DEMO_ACCOUNTS = [
-  {
-    role: 'Author',
-    email: 'priya.sharma@email.com',
-    password: 'bookleaf123',
-    icon: 'auto_stories',
-    detail: 'Priya Sharma · 2 titles · live royalty thread',
-  },
-  {
-    role: 'Operations',
-    email: 'admin@bookleaf.in',
-    password: 'bookleaf123',
-    icon: 'inbox_customize',
-    detail: 'Pooja Mehta · full queue + AI console',
-  },
-];
-
 export const LoginPage = () => {
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [email, setEmail] = useState('priya.sharma@email.com');
-  const [password, setPassword] = useState('bookleaf123');
+  const [adminLogin, setAdminLogin] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -39,7 +23,7 @@ export const LoginPage = () => {
     setError(null);
     setLoading(true);
     try {
-      const signedIn = await login(email, password);
+      const signedIn = await login(email, password, adminLogin ? 'ADMIN' : 'AUTHOR');
       const from = (location.state as { from?: string } | null)?.from;
       const destination =
         from && (signedIn.role === 'ADMIN' ? from.startsWith('/admin') : from.startsWith('/app'))
@@ -84,8 +68,7 @@ export const LoginPage = () => {
         </div>
 
         <div className="relative max-w-lg">
-          <p className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a7f3d0] ring-1 ring-white/15">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#85f8c4]" />
+          <p className="mb-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a7f3d0]">
             Publishing, without the wait
           </p>
           <h1 className="text-[2.6rem] font-bold leading-[1.12] tracking-[-0.03em] text-balance">
@@ -143,13 +126,15 @@ export const LoginPage = () => {
 
           <p className="text-label-sm font-semibold uppercase tracking-[0.14em] text-primary">Welcome back</p>
           <h2 className="mt-1.5 text-[1.9rem] font-bold leading-tight tracking-tight text-ink">
-            Sign in to your desk
+            {adminLogin ? 'Admin sign in' : 'Author sign in'}
           </h2>
           <p className="mt-2 text-body-md text-[#64748b]">
-            Authors and the BookLeaf operations team use the same secure entry point.
+            {adminLogin
+              ? 'Sign in to manage author queries and support conversations.'
+              : 'Sign in to track your books, royalties and support queries.'}
           </p>
 
-          <form onSubmit={submit} className="mt-7 space-y-5" noValidate>
+          <form onSubmit={submit} className="mt-7 space-y-5">
             <div>
               <label htmlFor="email" className="field-label">
                 Email address
@@ -177,7 +162,6 @@ export const LoginPage = () => {
                 <label htmlFor="password" className="field-label">
                   Password
                 </label>
-                <span className="mb-1.5 text-[11px] text-[#94a3b8]">Demo accounts below</span>
               </div>
               <div className="relative">
                 <Icon
@@ -206,7 +190,7 @@ export const LoginPage = () => {
             </div>
 
             {error ? (
-              <div className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-soft px-3.5 py-3 text-body-sm text-danger-deep animate-fade-up">
+              <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-soft px-3.5 py-3 text-body-sm text-danger-deep animate-fade-up">
                 <Icon name="error" className="mt-0.5 text-[17px]" />
                 <span>{error}</span>
               </div>
@@ -220,52 +204,37 @@ export const LoginPage = () => {
                 </>
               ) : (
                 <>
-                  Sign in
+                  {adminLogin ? 'Sign in as admin' : 'Sign in as author'}
                   <Icon name="arrow_forward" className="text-[18px]" />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-8">
-            <div className="flex items-center gap-3">
-              <span className="h-px flex-1 bg-[#E2E8F0]" />
-              <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#94a3b8]">
-                Demo accounts · password bookleaf123
-              </span>
-              <span className="h-px flex-1 bg-[#E2E8F0]" />
-            </div>
-
-            <div className="mt-3 grid gap-2">
-              {DEMO_ACCOUNTS.map((account) => (
-                <button
-                  key={account.role}
-                  type="button"
-                  onClick={() => {
-                    setEmail(account.email);
-                    setPassword(account.password);
-                    setError(null);
-                  }}
-                  className="group flex items-center gap-3 rounded-lg border border-[#E2E8F0] bg-white px-3 py-2.5 text-left transition-all hover:border-[#CBD5E1] hover:shadow-card"
-                >
-                  <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-[#F1F5F9] text-[#475569] group-hover:bg-[#E5EEFF] group-hover:text-primary">
-                    <Icon name={account.icon} className="text-[17px]" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-label-md font-semibold text-ink">{account.role} demo</span>
-                    <span className="block truncate text-[11px] text-[#64748b]">{account.detail}</span>
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                    Fill
-                  </span>
-                </button>
-              ))}
-            </div>
+          <div className="mt-7 border-t border-[#E2E8F0] pt-5 text-center">
+            <p className="text-body-sm text-[#64748b]">
+              {adminLogin ? 'Looking for your author desk?' : 'Part of the BookLeaf team?'}
+            </p>
+            <button
+              type="button"
+              disabled={loading}
+              onClick={() => {
+                setAdminLogin((current) => !current);
+                setEmail('');
+                setPassword('');
+                setShowPassword(false);
+                setError(null);
+              }}
+              className="btn-secondary mt-3 w-full"
+            >
+              <Icon name={adminLogin ? 'arrow_back' : 'admin_panel_settings'} className="text-[18px]" />
+              {adminLogin ? 'Back to author login' : 'Admin login'}
+            </button>
           </div>
 
           <p className="mt-7 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#94a3b8]">
             <Icon name="shield" className="mt-px text-[14px]" />
-            AI responses are generated server-side with Groq. Your API key never reaches this browser.
+            Your account gives you secure access to your BookLeaf desk.
           </p>
         </div>
       </div>

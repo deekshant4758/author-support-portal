@@ -9,7 +9,6 @@ import {
   EmptyState,
   ErrorState,
   MetricCard,
-  Pill,
   PriorityPill,
   ProgressBar,
   StatusPill as StatusBadge,
@@ -27,10 +26,25 @@ import type { Book } from '../../lib/types';
 
 const productionBook = (book: Book) => book.status !== 'Published & Live' && book.productionStage != null;
 
+const QUICK_ANSWERS = [
+  { label: 'When is my next royalty payout?', sectionId: 'royalty-timing' },
+  { label: 'My Amazon listing is unavailable', sectionId: 'distribution-availability' },
+];
+
 export const DashboardPage = () => {
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['author-summary'],
     queryFn: api.authors.me,
+  });
+  const {
+    data: knowledge,
+    isLoading: knowledgeLoading,
+    isError: knowledgeError,
+    refetch: refetchKnowledge,
+  } = useQuery({
+    queryKey: ['knowledge-base'],
+    queryFn: api.knowledge.list,
+    staleTime: 5 * 60_000,
   });
 
   if (isLoading) {
@@ -70,8 +84,7 @@ export const DashboardPage = () => {
     <div className="animate-fade-up">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#E2E8F0] bg-white px-3 py-1 text-label-sm uppercase tracking-[0.12em] text-[#64748b]">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+          <div className="text-label-sm font-semibold uppercase tracking-[0.12em] text-[#64748b]">
             Author Desk · {author.tier}
           </div>
           <h1 className="mt-3 text-[2rem] font-bold leading-tight tracking-[-0.03em] text-ink sm:text-[2.25rem]">
@@ -128,12 +141,6 @@ export const DashboardPage = () => {
               </span>
               <span className="text-[#cbd5e1]">·</span>
               Quarterly cycle
-            </span>
-          }
-          trailing={
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2 py-0.5 text-[10px] font-semibold text-[#475569]">
-              <span className={`h-1.5 w-1.5 rounded-full ${meetsThreshold ? 'bg-[#059669]' : 'bg-[#F59E0B]'}`} />
-              {meetsThreshold ? 'Queued' : 'Rolling'}
             </span>
           }
         />
@@ -234,21 +241,12 @@ export const DashboardPage = () => {
                 <Icon name="balance" className="text-[21px] text-primary" />
                 <h2 className="text-headline-sm text-ink">BookLeaf 80/20 royalty policy</h2>
               </div>
-              <span className="rounded-full border border-[#A7F3D0] bg-[#ECFDF5] px-2 py-0.5 text-[10px] font-semibold text-[#047857]">
-                Author-first
-              </span>
             </div>
             <p className="mt-2 text-body-sm leading-relaxed text-[#64748b]">
               Authors keep 100% of intellectual rights and receive 80% of net profit. Net profit is MRP minus print cost,
               platform commission and shipping. Royalties are calculated quarterly and paid within 45 days of quarter end.
               Balances below ₹1,000 roll over.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[#475569]">
-              <span className="rounded-md bg-[#F1F5F9] px-2 py-1">Quarterly cycle</span>
-              <span className="rounded-md bg-[#F1F5F9] px-2 py-1">45-day payout window</span>
-              <span className="rounded-md bg-[#F1F5F9] px-2 py-1">₹1,000 minimum</span>
-              <span className="rounded-md bg-[#F1F5F9] px-2 py-1">Bank transfer</span>
-            </div>
           </Card>
         </div>
 
@@ -304,26 +302,38 @@ export const DashboardPage = () => {
                 <h2 className="text-headline-sm">Need a quick answer?</h2>
               </div>
               <p className="mt-1 text-body-sm text-white/70">
-                The desk reviews every query. AI helps us route and draft faster — a specialist still signs off.
+                Select a question to read the answer here.
               </p>
             </div>
             <div className="space-y-2 p-4">
-              {[
-                { label: 'When is my next royalty payout?', subject: 'Royalty payout timeline' },
-                { label: 'My Amazon listing is unavailable', subject: 'Amazon listing availability' },
-              ].map((prompt) => (
-                <Link
-                  key={prompt.subject}
-                  to={`/app/tickets/new?subject=${encodeURIComponent(prompt.subject)}`}
-                  className="group flex items-center justify-between gap-2 rounded-lg border border-[#E2E8F0] px-3 py-2.5 text-body-sm text-ink transition-colors hover:border-[#CBD5E1] hover:bg-[#F8FAFC]"
-                >
-                  <span className="truncate">“{prompt.label}”</span>
-                  <Icon
-                    name="arrow_forward"
-                    className="text-[16px] text-[#94a3b8] transition-transform group-hover:translate-x-0.5 group-hover:text-primary"
-                  />
-                </Link>
-              ))}
+              {QUICK_ANSWERS.map((prompt) => {
+                const section = knowledge?.find((item) => item.id === prompt.sectionId);
+                return (
+                  <details key={prompt.sectionId} className="group border-b border-[#E2E8F0] last:border-b-0">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-md px-2 py-3 text-body-sm font-medium text-ink hover:bg-[#F8FAFC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary [&::-webkit-details-marker]:hidden">
+                      <span>{prompt.label}</span>
+                      <Icon
+                        name="expand_more"
+                        className="shrink-0 text-[18px] text-[#64748b] transition-transform group-open:rotate-180"
+                      />
+                    </summary>
+                    <div className="px-2 pb-4 text-body-sm leading-relaxed text-[#64748b]">
+                      {knowledgeLoading ? (
+                        <p role="status">Loading answer…</p>
+                      ) : knowledgeError || !section ? (
+                        <div>
+                          <p>We could not load this answer.</p>
+                          <button type="button" onClick={() => void refetchKnowledge()} className="link mt-2">
+                            Try again
+                          </button>
+                        </div>
+                      ) : (
+                        <p>{section.content}</p>
+                      )}
+                    </div>
+                  </details>
+                );
+              })}
               <Link
                 to="/app/tickets/new"
                 className="mt-1 flex items-center justify-center gap-1.5 rounded-lg bg-[#F1F5F9] px-3 py-2.5 text-label-md font-semibold text-ink transition-colors hover:bg-[#E5EEFF]"
@@ -336,22 +346,15 @@ export const DashboardPage = () => {
         </div>
       </div>
 
-<Card className="p-5">
+<Card className="mt-5 p-5">
   <div className="flex items-start justify-between gap-3">
     <div className="flex items-center gap-2">
       <Icon name="history" className="text-[21px] text-[#475569]" />
       <h2 className="text-headline-sm text-ink">Account snapshot</h2>
     </div>
-    <Pill
-      className={
-        openThreads.length > 0
-          ? 'border-ai-border bg-ai-soft text-ai-deep'
-          : 'border-[#A7F3D0] bg-[#ECFDF5] text-[#047857]'
-      }
-      dot={openThreads.length > 0 ? 'bg-ai' : 'bg-[#059669]'}
-    >
+    <span className="text-label-sm text-[#64748b]">
       {openThreads.length > 0 ? 'Active threads' : 'All settled'}
-    </Pill>
+    </span>
   </div>
   <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-body-sm sm:grid-cols-3 lg:grid-cols-6">
     <div>

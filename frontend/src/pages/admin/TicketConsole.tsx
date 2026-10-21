@@ -568,8 +568,7 @@ export const AdminTicketPage = () => {
                   <p className="text-[9px] uppercase tracking-wider text-ai-deep">Grounded triage</p>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full border border-ai-border bg-white px-2 py-0.5 text-[9px] font-semibold text-ai-deep">
-                <span className="h-1.5 w-1.5 rounded-full bg-ai" />
+              <span className="text-[11px] text-ai-deep">
                 {ticket.categorySource === 'AI' ? 'LLM + KB' : 'Rule fallback'}
               </span>
             </div>
@@ -679,10 +678,10 @@ export const AdminTicketPage = () => {
               {draftMeta ? (
                 <span
                   className={clsx(
-                    'rounded-full border px-2 py-0.5 text-[9px] font-semibold',
+                    'text-[11px]',
                     draftMeta.source === 'AI'
-                      ? 'border-ai-border bg-ai-soft text-ai-deep'
-                      : 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]',
+                      ? 'text-ai-deep'
+                      : 'text-[#B45309]',
                   )}
                 >
                   {draftMeta.source === 'AI' ? 'AI grounded' : 'Template fallback'}
@@ -700,7 +699,7 @@ export const AdminTicketPage = () => {
                     type="button"
                     onClick={() => setTone(option.value)}
                     className={clsx(
-                      'inline-flex items-center gap-1 rounded-full border px-2 py-1 text-[9px] font-semibold transition-colors',
+                      'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition-colors',
                       tone === option.value
                         ? 'border-ai bg-ai text-white'
                         : 'border-[#E2E8F0] bg-white text-[#475569] hover:bg-[#F8FAFC]',

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { api } from '../../lib/api';
 import { Icon } from '../../components/Icon';
-import { Card, CategoryPill, CopyButton, EmptyState, ErrorState, Pill } from '../../components/ui';
+import { Card, CategoryPill, CopyButton, EmptyState, ErrorState } from '../../components/ui';
 import { CATEGORY_LABELS } from '../../lib/format';
 import type { TicketCategory } from '../../lib/types';
 
@@ -222,11 +222,6 @@ export const KnowledgeBasePage = () => {
               This content is served through an authenticated endpoint. The Groq API key lives only in the backend
               environment and is never sent to the browser.
             </p>
-            <div className="mt-2 flex flex-wrap gap-1">
-              <Pill className="border-[#DDD6FE] bg-white/70 text-[#6D28D9] !text-[9px]">Groq</Pill>
-              <Pill className="border-[#DDD6FE] bg-white/70 text-[#6D28D9] !text-[9px]">gpt-oss-20b triage</Pill>
-              <Pill className="border-[#DDD6FE] bg-white/70 text-[#6D28D9] !text-[9px]">gpt-oss-120b drafts</Pill>
-            </div>
           </div>
         </aside>
       </div>

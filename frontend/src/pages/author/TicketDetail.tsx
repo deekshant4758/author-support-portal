@@ -148,11 +148,10 @@ export const TicketDetailPage = () => {
           <div className="flex flex-wrap items-center gap-2">
             <StatusPill status={ticket.status} />
             <PriorityPill priority={ticket.priority} />
-            <CategoryPill category={ticket.category} />
             <span
               className={clsx(
-                'ml-auto inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold',
-                live === 'live' ? 'bg-[#ECFDF5] text-[#047857]' : 'bg-[#F1F5F9] text-[#475569]',
+                'ml-auto inline-flex items-center gap-1.5 text-[11px]',
+                live === 'live' ? 'text-[#047857]' : 'text-[#475569]',
               )}
             >
               <span
@@ -178,15 +177,10 @@ export const TicketDetailPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <SlaPill minutes={ticket.slaRemainingMinutes} breached={ticket.slaBreached} />
-            <span className="inline-flex items-center gap-1 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-[10px] text-[#64748b]">
-              <Icon name="auto_awesome" className="text-[13px] text-ai" />
-              Triaged by {ticket.categorySource === 'AI' ? 'AI' : ticket.categorySource === 'HEURISTIC' ? 'rule engine' : 'the desk'}
-              {ticket.aiConfidence != null ? ` · ${Math.round(ticket.aiConfidence * 100)}% confidence` : ''}
-            </span>
             {ticket.book ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-[#E2E8F0] bg-[#F8FAFC] px-2.5 py-1 text-[10px] text-[#64748b]">
+              <span className="inline-flex items-center gap-1 text-[11px] text-[#64748b]">
                 <Icon name="menu_book" className="text-[13px]" />
                 {ticket.book.title}
               </span>
