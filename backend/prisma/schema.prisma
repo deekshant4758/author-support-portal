@@ -1,0 +1,153 @@
+// BookLeaf Author Support Portal - data model
+// SQLite is used for a zero-setup local/demo experience. The schema is
+// provider-agnostic (no SQLite-only features), so switching DATABASE_URL to
+// Postgres only requires changing `provider` below and re-running migrations.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String // AUTHOR | ADMIN
+  authorId     String?   @unique
+  author       Author?   @relation(fields: [authorId], references: [id])
+  messages     Message[]
+  assigned     Ticket[]  @relation("assignedTo")
+  events       TicketEvent[]
+  createdAt    DateTime  @default(now())
+}
+
+model Author {
+  id         String   @id
+  name       String
+  email      String   @unique
+  phone      String
+  city       String
+  joinedDate String
+  tier       String   @default("Standard Free")
+  bankName   String?
+  bankLast4  String?
+  user       User?
+  books      Book[]
+  tickets    Ticket[]
+}
+
+model Book {
+  id                    String   @id
+  authorId              String
+  author                Author   @relation(fields: [authorId], references: [id])
+  title                 String
+  isbn                  String   @unique
+  genre                 String
+  publicationDate       String?
+  status                String
+  mrp                   Float?
+  royaltyPerCopy        Float?
+  totalCopiesSold       Int      @default(0)
+  totalRoyaltyEarned    Float    @default(0)
+  royaltyPaid           Float    @default(0)
+  royaltyPending        Float    @default(0)
+  lastRoyaltyPayoutDate String?
+  printPartner          String?
+  availableOn           String   @default("[]") // JSON array of channel names
+  productionStage       Int? // 1..9 while in production, null once live
+  productionNote        String?
+  tickets               Ticket[]
+}
+
+model Ticket {
+  id               String    @id @default(cuid())
+  publicId         String    @unique // e.g. TKT-8912
+  authorId         String
+  author           Author    @relation(fields: [authorId], references: [id])
+  bookId           String?
+  book             Book?     @relation(fields: [bookId], references: [id])
+  subject          String
+  description      String
+  category         String // ROYALTY_PAYMENTS | ISBN_METADATA | PRINTING_QUALITY |
+  // DISTRIBUTION_AVAILABILITY | BOOK_STATUS_PRODUCTION | GENERAL_INQUIRY
+  categorySource   String    @default("AI") // AI | HEURISTIC | ADMIN | AUTHOR
+  aiCategory       String?
+  aiConfidence     Float?
+  priority         String    @default("MEDIUM") // CRITICAL | HIGH | MEDIUM | LOW
+  prioritySource   String    @default("AI") // AI | HEURISTIC | ADMIN
+  aiPriority       String?
+  aiPriorityReason String?
+  status           String    @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
+  assignedToId     String?
+  assignedTo       User?     @relation("assignedTo", fields: [assignedToId], references: [id])
+  attachmentName   String?
+  attachmentSize   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  lastMessageAt    DateTime  @default(now())
+  firstResponseAt  DateTime?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  messages         Message[]
+  events           TicketEvent[]
+  aiUsage          AiUsage[]
+
+  @@index([authorId, status])
+  @@index([status, priority, createdAt])
+  @@index([category])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  authorName String
+  role       String // AUTHOR | ADMIN | SYSTEM
+  body       String
+  isInternal Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model TicketEvent {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actor       User?    @relation(fields: [actorId], references: [id])
+  actorName   String
+  type        String // CREATED | AI_TRIAGE | STATUS_CHANGED | ASSIGNED | CATEGORY_OVERRIDE |
+  // PRIORITY_OVERRIDE | PUBLIC_REPLY | INTERNAL_NOTE | DRAFT_GENERATED | CLOSED
+  description String
+  metadata    String? // JSON string
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model AiUsage {
+  id               String   @id @default(cuid())
+  ticketId         String?
+  ticket           Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  operation        String // CLASSIFY | DRAFT
+  model            String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  latencyMs        Int      @default(0)
+  estimatedCostUsd Float    @default(0)
+  success          Boolean  @default(true)
+  fallback         Boolean  @default(false)
+  cached           Boolean  @default(false)
+  error            String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+}
