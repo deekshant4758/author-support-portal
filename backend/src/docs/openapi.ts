@@ -45,7 +45,7 @@ const ticketIdParam = {
   in: 'path',
   required: true,
   schema: { type: 'string' },
-  description: 'Ticket id (cuid) — not the human-readable TKT number.',
+  description: 'Internal ticket ID or public TKT reference.',
 };
 
 export const openApiSpec = {
@@ -234,13 +234,16 @@ export const openApiSpec = {
         security: [],
         requestBody: jsonBody({ $ref: '#/components/schemas/LoginRequest' }),
         responses: {
-          200: dataResponse({
-            type: 'object',
-            properties: {
-              token: { type: 'string' },
-              user: { $ref: '#/components/schemas/User' },
+          200: dataResponse(
+            {
+              type: 'object',
+              properties: {
+                token: { type: 'string' },
+                user: { $ref: '#/components/schemas/User' },
+              },
             },
-          }, 'JWT and user profile'),
+            'JWT and user profile',
+          ),
           401: errorResponse,
           422: errorResponse,
           429: errorResponse,
@@ -254,11 +257,19 @@ export const openApiSpec = {
         responses: { 200: dataResponse({ type: 'object', additionalProperties: true }), 401: errorResponse },
       },
     },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'End the client session',
+        description: 'The client discards its token. Existing JWTs remain valid until expiry.',
+        responses: { 204: { description: 'Signed out; no response body' }, 401: errorResponse },
+      },
+    },
     '/authors/me': {
       get: {
         tags: ['Author'],
         summary: 'Author dashboard summary',
-        description: 'Profile, royalty totals, catalogue counts and the five most recent tickets.',
+        description: 'Profile, complete book catalogue, royalty totals, catalogue counts and recent tickets.',
         responses: { 200: dataResponse({ type: 'object', additionalProperties: true }), 403: errorResponse },
       },
     },
@@ -270,7 +281,10 @@ export const openApiSpec = {
         parameters: [
           { name: 'authorId', in: 'query', schema: { type: 'string' }, description: 'Admin only.' },
         ],
-        responses: { 200: dataResponse({ type: 'array', items: { $ref: '#/components/schemas/Book' } }), 403: errorResponse },
+        responses: {
+          200: dataResponse({ type: 'array', items: { $ref: '#/components/schemas/Book' } }),
+          403: errorResponse,
+        },
       },
     },
     '/books/{id}': {
@@ -296,11 +310,20 @@ export const openApiSpec = {
           { name: 'status', in: 'query', schema: { type: 'string' }, example: 'OPEN,IN_PROGRESS' },
           { name: 'category', in: 'query', schema: { type: 'string' } },
           { name: 'priority', in: 'query', schema: { type: 'string' }, example: 'CRITICAL,HIGH' },
-          { name: 'assignee', in: 'query', schema: { type: 'string' }, description: 'Admin only: me | unassigned | user id' },
+          {
+            name: 'assignee',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Admin only: me | unassigned | user id',
+          },
           { name: 'dateFrom', in: 'query', schema: { type: 'string', format: 'date-time' } },
           { name: 'dateTo', in: 'query', schema: { type: 'string', format: 'date-time' } },
           { name: 'search', in: 'query', schema: { type: 'string' } },
-          { name: 'sort', in: 'query', schema: { type: 'string', enum: ['urgency', 'oldest', 'newest', 'updated'] } },
+          {
+            name: 'sort',
+            in: 'query',
+            schema: { type: 'string', enum: ['urgency', 'oldest', 'newest', 'updated'] },
+          },
           { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
           { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 50, maximum: 100 } },
         ],
@@ -328,7 +351,8 @@ export const openApiSpec = {
       get: {
         tags: ['Tickets'],
         summary: 'Ticket detail with thread and timeline',
-        description: 'Authors receive public messages only. Admins also receive internal notes and full audit events.',
+        description:
+          'Authors receive public messages only. Admins also receive internal notes and full audit events.',
         parameters: [ticketIdParam],
         responses: {
           200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
@@ -339,7 +363,8 @@ export const openApiSpec = {
       patch: {
         tags: ['Tickets'],
         summary: 'Update status / category / priority / assignee (admin)',
-        description: 'Overrides are recorded in the audit log with categorySource/prioritySource set to ADMIN.',
+        description:
+          'Overrides are recorded in the audit log with categorySource/prioritySource set to ADMIN.',
         parameters: [ticketIdParam],
         requestBody: jsonBody({ $ref: '#/components/schemas/UpdateTicketRequest' }),
         responses: {
@@ -359,9 +384,15 @@ export const openApiSpec = {
         requestBody: jsonBody({
           type: 'object',
           required: ['assignedToId'],
-          properties: { assignedToId: { type: 'string', nullable: true, description: 'Admin id, "me", or null' } },
+          properties: {
+            assignedToId: { type: 'string', nullable: true, description: 'Admin id, "me", or null' },
+          },
         }),
-        responses: { 200: dataResponse({ $ref: '#/components/schemas/Ticket' }), 400: errorResponse, 403: errorResponse },
+        responses: {
+          200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
+          400: errorResponse,
+          403: errorResponse,
+        },
       },
     },
     '/tickets/{id}/messages': {
@@ -433,7 +464,11 @@ export const openApiSpec = {
         tags: ['AI'],
         summary: 'Re-run AI triage (admin)',
         parameters: [ticketIdParam],
-        responses: { 200: dataResponse({ $ref: '#/components/schemas/Ticket' }), 403: errorResponse, 429: errorResponse },
+        responses: {
+          200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
+          403: errorResponse,
+          429: errorResponse,
+        },
       },
     },
     '/admin/stats': {
@@ -451,14 +486,18 @@ export const openApiSpec = {
       get: {
         tags: ['Admin'],
         summary: 'Operations team and assignment counts',
-        responses: { 200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }) },
+        responses: {
+          200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }),
+        },
       },
     },
     '/admin/authors': {
       get: {
         tags: ['Admin'],
         summary: 'Author directory with book and ticket counts',
-        responses: { 200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }) },
+        responses: {
+          200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }),
+        },
       },
     },
     '/admin/ai/usage': {
@@ -466,14 +505,38 @@ export const openApiSpec = {
         tags: ['Admin'],
         summary: 'Recent AI usage log and token/cost totals',
         parameters: [{ name: 'limit', in: 'query', schema: { type: 'integer', default: 30, maximum: 100 } }],
-        responses: { 200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }) },
+        responses: {
+          200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }),
+        },
       },
     },
     '/knowledge-base': {
       get: {
         tags: ['Knowledge Base'],
-        summary: 'BookLeaf policy sections used for AI grounding',
-        responses: { 200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }) },
+        summary: 'Internal policy sections used for AI grounding (admin only)',
+        responses: {
+          200: dataResponse({ type: 'array', items: { type: 'object', additionalProperties: true } }),
+          403: errorResponse,
+        },
+      },
+    },
+    '/knowledge-base/answers': {
+      get: {
+        tags: ['Knowledge Base'],
+        summary: 'Public support answers for authenticated portal users',
+        responses: {
+          200: dataResponse({
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                question: { type: 'string' },
+                answer: { type: 'string' },
+              },
+            },
+          }),
+        },
       },
     },
     '/events': {
@@ -486,7 +549,10 @@ export const openApiSpec = {
         security: [],
         parameters: [{ name: 'token', in: 'query', required: true, schema: { type: 'string' } }],
         responses: {
-          200: { description: 'text/event-stream', content: { 'text/event-stream': { schema: { type: 'string' } } } },
+          200: {
+            description: 'text/event-stream',
+            content: { 'text/event-stream': { schema: { type: 'string' } } },
+          },
           401: errorResponse,
         },
       },

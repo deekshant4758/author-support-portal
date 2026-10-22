@@ -75,9 +75,10 @@ const CATEGORY_RULES: Array<{ category: TicketCategory; patterns: Array<[RegExp,
 ];
 
 export const heuristicClassify = (text: string): HeuristicCategoryResult => {
-  const scores = Object.fromEntries(
-    CATEGORY_RULES.map((rule) => [rule.category, 0]),
-  ) as Record<TicketCategory, number>;
+  const scores = Object.fromEntries(CATEGORY_RULES.map((rule) => [rule.category, 0])) as Record<
+    TicketCategory,
+    number
+  >;
 
   for (const rule of CATEGORY_RULES) {
     for (const [pattern, weight] of rule.patterns) {
@@ -85,9 +86,7 @@ export const heuristicClassify = (text: string): HeuristicCategoryResult => {
     }
   }
 
-  const ranked = (Object.entries(scores) as Array<[TicketCategory, number]>).sort(
-    (a, b) => b[1] - a[1],
-  );
+  const ranked = (Object.entries(scores) as Array<[TicketCategory, number]>).sort((a, b) => b[1] - a[1]);
   const [topCategory, topScore] = ranked[0];
   const secondScore = ranked[1]?.[1] ?? 0;
 
@@ -192,11 +191,7 @@ const money = (value: number | null | undefined) =>
 
 const bookLine = (book?: Book | null) => {
   if (!book) return 'This is a general / account-level query, not tied to a specific title.';
-  const bits = [
-    `Title: ${book.title}`,
-    `ISBN: ${book.isbn}`,
-    `Status: ${book.status}`,
-  ];
+  const bits = [`Title: ${book.title}`, `ISBN: ${book.isbn}`, `Status: ${book.status}`];
   if (book.mrp != null) bits.push(`MRP ${money(book.mrp)}`);
   if (book.totalCopiesSold > 0) bits.push(`${book.totalCopiesSold} copies sold`);
   if (book.totalRoyaltyEarned > 0) bits.push(`lifetime royalty ${money(book.totalRoyaltyEarned)}`);
@@ -221,43 +216,37 @@ export const templateDraft = (context: DraftContext): string => {
   const record = facts
     ? `Current record: ${facts}.`
     : 'This is an account-level query, so no single title is linked.';
+  const metadataUpdate =
+    /\b(update|change|edit)\b/i.test(`${ticket.subject} ${ticket.description}`) &&
+    /\b(bio|description|categor(?:y|ies)|metadata)\b/i.test(`${ticket.subject} ${ticket.description}`) &&
+    !/\b(wrong|duplicate|mismatch|different isbn)\b/i.test(`${ticket.subject} ${ticket.description}`);
+  const metadataReply = `You can request a change to the book description, author bio or categories through this support ticket. Please reply with the exact replacement text and the listing link. Metadata changes typically appear on platforms within 3–5 business days after submission. Our team will confirm when the update has been submitted.`;
 
   const openings: Record<TicketCategory, string> = {
-    ROYALTY_PAYMENTS:
-      `Thank you for reaching out about the royalty position for ${label}. I understand how important it is to have clarity on earnings you have worked hard for, and I am sorry for the uncertainty this has caused.`,
-    ISBN_METADATA:
-      `Thank you for flagging the metadata concern for ${label}. A mismatch between our records and a live listing is something we treat seriously, and I am sorry you had to chase this.`,
-    PRINTING_QUALITY:
-      `I am sorry to hear about the print quality issue with ${label}. That is not the standard we want an author to receive, and I understand your frustration.`,
-    DISTRIBUTION_AVAILABILITY:
-      `Thank you for letting us know that ${label} is showing as unavailable. I understand the impact a missing listing has on sales, and we will treat this as a priority.`,
-    BOOK_STATUS_PRODUCTION:
-      `Thank you for checking in on the production status of ${label}. I understand that waiting without a firm date is frustrating, so I have pulled the current record for you.`,
-    GENERAL_INQUIRY:
-      `Thank you for getting in touch about ${label}. I am happy to help and want to give you a clear answer rather than a generic one.`,
+    ROYALTY_PAYMENTS: `Thank you for reaching out about the royalty position for ${label}. I understand how important it is to have clarity on earnings you have worked hard for, and I am sorry for the uncertainty this has caused.`,
+    ISBN_METADATA: `Thank you for flagging the metadata concern for ${label}. A mismatch between our records and a live listing is something we treat seriously, and I am sorry you had to chase this.`,
+    PRINTING_QUALITY: `I am sorry to hear about the print quality issue with ${label}. That is not the standard we want an author to receive, and I understand your frustration.`,
+    DISTRIBUTION_AVAILABILITY: `Thank you for letting us know that ${label} is showing as unavailable. I understand the impact a missing listing has on sales, and we will treat this as a priority.`,
+    BOOK_STATUS_PRODUCTION: `Thank you for checking in on the production status of ${label}. I understand that waiting without a firm date is frustrating, so I have pulled the current record for you.`,
+    GENERAL_INQUIRY: `Thank you for getting in touch about ${label}. I am happy to help and want to give you a clear answer rather than a generic one.`,
   };
 
   const bodies: Record<TicketCategory, string> = {
     ROYALTY_PAYMENTS: `${
       facts
         ? `Here is what I can confirm from your account: ${facts}.`
-        : 'This is an account-level query, so I am reviewing your author account, royalty ledger and payout details directly.'
-    } Royalties are calculated quarterly and released within 45 days of the quarter ending, with a minimum payout threshold of ₹1,000. If a balance is below the threshold it rolls into the next cycle.\n\nOur finance team is reviewing the settlement and the bank details on file now. I will come back to you within 48 hours with a confirmed payout date. If your bank details have changed, please update them in your dashboard so the transfer is not returned.`,
-    ISBN_METADATA: `${record} Every BookLeaf title is assigned a unique ISBN under the BookLeaf imprint, and a duplicate or mismatched ISBN on a live listing is treated as a high-priority data issue.\n\nI am escalating this to our production metadata team now with the details you shared. They will verify the ISBN linked to the listing and correct the feed; our committed turnaround for this is 48 hours. Please keep the physical copy and the listing screenshot handy in case they need to confirm the exact discrepancy.`,
+        : 'No individual book is linked to this request; our finance team will need to verify your account totals.'
+    } Authors receive 80% of net profit: MRP minus printing cost, platform commission and shipping. Royalties are calculated quarterly and released within 45 days of the quarter ending, with a minimum payout threshold of ₹1,000. If a balance is below the threshold it rolls into the next cycle.\n\nI will ask our finance team to check the settlement and provide an update within 48 hours. If your bank details have changed, please tell support so we can arrange verification. Please do not send full bank details in this chat.`,
+    ISBN_METADATA: metadataUpdate
+      ? metadataReply
+      : `${record} Every BookLeaf title is assigned a unique ISBN under the BookLeaf imprint, and a duplicate or mismatched ISBN on a live listing is treated as a high-priority data issue.\n\nI will escalate this to our production metadata team with a 48-hour resolution target. Please reply with the affected listing link and the ISBN printed on your copy so the team can verify the discrepancy.`,
     PRINTING_QUALITY: `${record} For verified print defects, BookLeaf arranges a free reprint — you should not pay for a defective copy. Standard reprint turnaround is 5–7 business days after verification.\n\nCould you please reply with clear photos of the affected copies (cover, spine, and the misprinted pages) plus the delivery details? Once we have those, I will raise the reprint with our print team and confirm the dispatch timeline. You will not be asked to cover the cost of a verified defect.`,
     DISTRIBUTION_AVAILABILITY: `${record} A listing showing as unavailable is usually a stock-sync issue between our feed and the platform rather than a problem with the book itself.\n\nI am triggering a re-sync with our distribution team now. In most cases the listing is live again within 24–48 hours. I will keep this ticket open and confirm once the feed shows the title as available; if it is still down after 48 hours, we will escalate it to the platform account manager.`,
-    BOOK_STATUS_PRODUCTION: `${record}${book?.productionStage ? ` Production is currently at stage ${book.productionStage} of 9.` : ''}\n\nThe publishing pipeline runs: Manuscript Received → Editing → Cover Design → Typesetting → Proofreading → ISBN Assignment → Printing → Distribution Setup → Published & Live. Delays most often occur at Cover Design (awaiting approval) or Proofreading (revision rounds).\n\nOur production editor is confirming the next milestone date and will update you within 48 hours with a specific revised date. If anything is waiting on your approval, we will tell you exactly what is needed so it does not hold the title up.`,
-    GENERAL_INQUIRY: `${
-      facts
-        ? `Here is the context I have: ${facts}.`
-        : 'I have logged this as an account-level request.'
-    } BookLeaf handles cover design, typesetting, ISBN assignment, printing, distribution and royalty management, with in-house printing in Delhi and partners Repro India and Epitome Books.\n\nI have noted your request and will confirm the exact next step within 48 hours. If you can share any additional detail — screenshots, dates, or the specific change you need — it will help us resolve this in one pass.`,
+    BOOK_STATUS_PRODUCTION: `${book ? `The current status recorded for "${book.title}" is ${book.status}.` : 'Please confirm the book title so we can check its production status.'}\n\nA confirmed completion date is not available in this record. I will ask our production editor to check the next milestone and update this ticket within 48 hours. If we need an approval or a revision from you, we will explain the specific next step.`,
+    GENERAL_INQUIRY: metadataUpdate
+      ? metadataReply
+      : `I have received your request about ${label}. I will review the details with the relevant team and update this ticket within 48 hours. If there is a specific change you need, please reply with the details so we can confirm what is possible.`,
   };
-
-  const priorityLine =
-    ticket.priority === 'CRITICAL' || ticket.priority === 'HIGH'
-      ? `Given the impact of this issue, our team is treating it as ${ticket.priority.toLowerCase()} priority.`
-      : '';
 
   return [
     `Hi ${firstName},`,
@@ -265,9 +254,7 @@ export const templateDraft = (context: DraftContext): string => {
     openings[category],
     '',
     bodies[category],
-    priorityLine ? `\n${priorityLine}` : '',
-    '',
-    'Next step: our team is reviewing this now and will get back to you within 48 hours with an update. You can reply directly on this ticket and it will reach the same thread.',
+    'You can reply directly on this ticket to continue the conversation.',
     '',
     'Warmly,',
     'BookLeaf Author Support',
@@ -277,5 +264,4 @@ export const templateDraft = (context: DraftContext): string => {
     .trim();
 };
 
-export const categoryLabel = (category: string) =>
-  CATEGORY_LABELS[category as TicketCategory] ?? category;
+export const categoryLabel = (category: string) => CATEGORY_LABELS[category as TicketCategory] ?? category;

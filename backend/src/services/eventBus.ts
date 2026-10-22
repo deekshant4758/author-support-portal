@@ -2,18 +2,13 @@ import type { Response } from 'express';
 import type { UserRole } from '../types/auth';
 
 export interface PortalEvent {
-  type:
-    | 'connected'
-    | 'ticket.created'
-    | 'ticket.updated'
-    | 'ticket.message'
-    | 'ticket.closed'
-    | 'heartbeat';
+  type: 'connected' | 'ticket.created' | 'ticket.updated' | 'ticket.message' | 'ticket.closed' | 'heartbeat';
   ticketId?: string;
   ticketPublicId?: string;
   authorId?: string | null;
   data?: unknown;
   at?: string;
+  adminOnly?: boolean;
 }
 
 interface Subscriber {
@@ -68,7 +63,7 @@ class EventBus {
       // Admins see every support event; authors only see events on their own
       // tickets. This is enforced server-side, not in the browser.
       const isAdmin = sub.role === 'ADMIN';
-      const isOwner = event.authorId != null && sub.authorId === event.authorId;
+      const isOwner = !event.adminOnly && event.authorId != null && sub.authorId === event.authorId;
       if (isAdmin || isOwner) safeWrite(sub.res, payload);
     }
   }

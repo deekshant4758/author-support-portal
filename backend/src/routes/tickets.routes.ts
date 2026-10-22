@@ -19,12 +19,7 @@ import {
   type TicketQueryInput,
   type UpdateTicketInput,
 } from '../validation/schemas';
-import {
-  generatePublicId,
-  getTicketForUser,
-  listTickets,
-  ticketInclude,
-} from '../services/ticketService';
+import { generatePublicId, getTicketForUser, listTickets, ticketInclude } from '../services/ticketService';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
 import { serializeBook, serializeEvent, serializeMessage, serializeTicket } from '../lib/serialize';
 import { classifyTicket } from '../services/ai/classifier';
@@ -89,7 +84,7 @@ ticketsRouter.post(
     const manualCategory =
       input.category && input.category !== 'AUTO' ? (input.category as TicketCategory) : null;
 
-    const publicId = await generatePublicId();
+    const publicId = generatePublicId();
     const aiLabel = classification.source === 'AI' ? 'AI' : 'Rule engine';
 
     const ticket = await prisma.ticket.create({
@@ -124,8 +119,7 @@ ticketsRouter.post(
               role: 'SYSTEM',
               body:
                 `Thanks for reaching out, ${author.name.split(' ')[0]}. Your ticket ${publicId} is in the queue ` +
-                `and has been routed to our ${CATEGORY_LABELS[classification.category]} desk. ` +
-                'A specialist will reply here within 24 hours (usually much sooner). You will see the reply live on this page.',
+                'and is waiting for our support team. You can follow the conversation here.',
               isInternal: false,
             },
           ],
@@ -220,7 +214,9 @@ ticketsRouter.patch(
   validate(idParamSchema, 'params'),
   validate(updateTicketSchema),
   asyncHandler(async (req, res) => {
-    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
+    });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
     const input = req.body as UpdateTicketInput;
@@ -339,7 +335,9 @@ ticketsRouter.post(
   validate(idParamSchema, 'params'),
   validate(assignSchema),
   asyncHandler(async (req, res) => {
-    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
+    });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
     const requested = (req.body as { assignedToId: string | null }).assignedToId;
@@ -386,7 +384,9 @@ ticketsRouter.post(
   validate(createMessageSchema),
   asyncHandler(async (req, res) => {
     const user = req.user!;
-    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
+    });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
     const isAdmin = user.role === 'ADMIN';
@@ -405,7 +405,7 @@ ticketsRouter.post(
     }
 
     const now = new Date();
-    const ticketUpdates: Prisma.TicketUpdateInput = { lastMessageAt: now };
+    const ticketUpdates: Prisma.TicketUpdateInput = isInternal ? {} : { lastMessageAt: now };
 
     if (isAdmin && !isInternal) {
       if (!ticket.firstResponseAt) ticketUpdates.firstResponseAt = now;
@@ -446,7 +446,9 @@ ticketsRouter.post(
               type: isInternal ? 'INTERNAL_NOTE' : 'PUBLIC_REPLY',
               description: isInternal
                 ? `${user.name} added an internal note (not visible to the author).`
-                : `${user.name} replied to the author.`,
+                : isAdmin
+                  ? `${user.name} replied to the author.`
+                  : `${user.name} replied to the support team.`,
             },
           },
         },
@@ -472,6 +474,7 @@ ticketsRouter.post(
     }
     publishTicketEvent({
       type: 'ticket.updated',
+      adminOnly: isInternal,
       ticketId: ticket.id,
       ticketPublicId: ticket.publicId,
       authorId: ticket.authorId,
@@ -492,7 +495,9 @@ ticketsRouter.post(
   '/:id/close',
   validate(idParamSchema, 'params'),
   asyncHandler(async (req, res) => {
-    const ticket = await prisma.ticket.findUnique({ where: { id: req.params.id } });
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
+    });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
     if (req.user!.role !== 'ADMIN' && ticket.authorId !== req.user!.authorId) {
@@ -539,8 +544,8 @@ ticketsRouter.post(
   asyncHandler(async (req, res) => {
     const input = req.body as DraftInput;
 
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: req.params.id },
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
       include: {
         book: true,
         author: true,
@@ -614,8 +619,8 @@ ticketsRouter.post(
   aiLimiter,
   validate(idParamSchema, 'params'),
   asyncHandler(async (req, res) => {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: req.params.id },
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
       include: { book: true, author: true },
     });
     if (!ticket) throw notFound('That support ticket does not exist.');

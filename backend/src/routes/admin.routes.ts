@@ -5,6 +5,8 @@ import { authenticate, requireAdmin } from '../middleware/auth';
 import { buildAdminStats } from '../services/ticketService';
 import { serializeAuthor } from '../lib/serialize';
 import { validationFailed } from '../lib/errors';
+import { z } from 'zod';
+import { validate } from '../middleware/validate';
 
 export const adminRouter = Router();
 
@@ -24,6 +26,9 @@ adminRouter.get(
 
     const from = parse(req.query.from, 'from');
     const to = parse(req.query.to, 'to');
+    if (from && to && from > to) {
+      throw validationFailed({ from: ['Must be before or equal to to.'] });
+    }
     const stats = await buildAdminStats({ from, to });
     res.json({ data: stats });
   }),
@@ -67,8 +72,9 @@ adminRouter.get(
 
 adminRouter.get(
   '/ai/usage',
+  validate(z.object({ limit: z.coerce.number().int().min(1).max(100).default(30) }), 'query'),
   asyncHandler(async (req, res) => {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 30));
+    const limit = Number(req.query.limit);
     const usage = await prisma.aiUsage.findMany({
       orderBy: { createdAt: 'desc' },
       take: limit,

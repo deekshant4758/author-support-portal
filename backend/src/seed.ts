@@ -1,7 +1,7 @@
 /**
  * Seeds the application from the assignment's sample dataset
  * (prisma/data/authors.json: 10 authors, 18 books) plus demo accounts, support
- * tickets and AI telemetry so every screen has realistic content.
+ * tickets so every screen has realistic content. Usage logs contain real calls only.
  *
  * Run with: npm run db:seed  (or npm run db:reset)
  */
@@ -41,7 +41,6 @@ interface SampleAuthor {
 }
 
 const DEMO_PASSWORD = 'bookleaf123';
-const BANK_NAMES = ['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank'];
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
 const hoursAgo = (hours: number) => minutesAgo(hours * 60);
@@ -55,21 +54,6 @@ const productionStageFor = (status: string): number | null => {
   if (/print/i.test(status)) return 7;
   if (/distribution/i.test(status)) return 8;
   return 1;
-};
-
-const productionNoteFor = (status: string): string | null => {
-  if (/cover design/i.test(status)) {
-    return 'Cover concepts are with the author for approval. Typesetting begins once the cover is signed off.';
-  }
-  if (/typesetting/i.test(status)) {
-    return 'Typesetting revision round 1 in progress. Interior galley expected shortly; a date will be confirmed by the production editor.';
-  }
-  return null;
-};
-
-const tierFor = (books: SampleBook[]): string => {
-  const lifetime = books.reduce((sum, book) => sum + book.total_royalty_earned, 0);
-  return lifetime >= 25_000 ? 'Bestseller Breakthrough' : 'Standard Free';
 };
 
 async function main() {
@@ -89,10 +73,7 @@ async function main() {
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
-  for (const [index, sampleAuthor] of sample.authors.entries()) {
-    const tier = tierFor(sampleAuthor.books);
-    const digits = sampleAuthor.phone.replace(/\D/g, '');
-
+  for (const sampleAuthor of sample.authors) {
     await prisma.author.create({
       data: {
         id: sampleAuthor.author_id,
@@ -101,9 +82,6 @@ async function main() {
         phone: sampleAuthor.phone,
         city: sampleAuthor.city,
         joinedDate: sampleAuthor.joined_date,
-        tier,
-        bankName: BANK_NAMES[index % BANK_NAMES.length],
-        bankLast4: digits.slice(-4),
         user: {
           create: {
             email: sampleAuthor.email,
@@ -130,7 +108,6 @@ async function main() {
             printPartner: book.print_partner,
             availableOn: JSON.stringify(book.available_on),
             productionStage: productionStageFor(book.status),
-            productionNote: productionNoteFor(book.status),
           })),
         },
       },
@@ -163,9 +140,8 @@ async function main() {
     },
   });
 
-  const systemAck = (firstName: string, publicId: string, category: string) =>
-    `Thanks for reaching out, ${firstName}. Your ticket ${publicId} is in the queue and has been routed to our ` +
-    `${category} desk. A specialist will reply here within 24 hours (usually much sooner). You will see the reply live on this page.`;
+  const systemAck = (firstName: string, publicId: string, _category: string) =>
+    `Thanks for reaching out, ${firstName}. Your ticket ${publicId} is in the queue. Our support team will reply here.`;
 
   type SeedTicket = Prisma.TicketCreateInput & { publicId: string };
 
@@ -350,7 +326,8 @@ async function main() {
       priority: 'HIGH',
       prioritySource: 'AI',
       aiPriority: 'HIGH',
-      aiPriorityReason: 'Verified-looking print defect across a 50-copy consignment; affects author distribution.',
+      aiPriorityReason:
+        'Verified-looking print defect across a 50-copy consignment; affects author distribution.',
       status: 'IN_PROGRESS',
       assignedTo: { connect: { id: adminRaghav.id } },
       firstResponseAt: minutesAgo(40),
@@ -576,7 +553,8 @@ async function main() {
       priority: 'HIGH',
       prioritySource: 'AI',
       aiPriority: 'HIGH',
-      aiPriorityReason: 'Production delay beyond two weeks on an in-production title; author needs a revised date.',
+      aiPriorityReason:
+        'Production delay beyond two weeks on an in-production title; author needs a revised date.',
       status: 'OPEN',
       assignedTo: { connect: { id: adminRaghav.id } },
       createdAt: hoursAgo(26),
@@ -694,7 +672,8 @@ async function main() {
       priority: 'MEDIUM',
       prioritySource: 'AI',
       aiPriority: 'MEDIUM',
-      aiPriorityReason: 'Channel coverage gap on a live title; affects reach but the book remains purchasable elsewhere.',
+      aiPriorityReason:
+        'Channel coverage gap on a live title; affects reach but the book remains purchasable elsewhere.',
       status: 'OPEN',
       createdAt: hoursAgo(52),
       lastMessageAt: hoursAgo(52),
@@ -904,22 +883,6 @@ async function main() {
   for (const ticket of tickets) {
     await prisma.ticket.create({ data: ticket });
   }
-
-  // --- AI telemetry (makes the cost dashboard meaningful on first load) -----
-  await prisma.aiUsage.createMany({
-    data: [
-      { operation: 'CLASSIFY', model: 'openai/gpt-oss-20b', promptTokens: 420, completionTokens: 78, latencyMs: 612, estimatedCostUsd: 0.00011, success: true, cached: false, createdAt: minutesAgo(330) },
-      { operation: 'DRAFT', model: 'openai/gpt-oss-120b', promptTokens: 1180, completionTokens: 362, latencyMs: 2410, estimatedCostUsd: 0.00039, success: true, cached: false, createdAt: minutesAgo(328) },
-      { operation: 'CLASSIFY', model: 'openai/gpt-oss-20b', promptTokens: 388, completionTokens: 71, latencyMs: 508, estimatedCostUsd: 0.0001, success: true, cached: false, createdAt: hoursAgo(2.2) },
-      { operation: 'DRAFT', model: 'openai/gpt-oss-120b', promptTokens: 1044, completionTokens: 298, latencyMs: 2190, estimatedCostUsd: 0.00034, success: true, cached: false, createdAt: minutesAgo(46) },
-      { operation: 'CLASSIFY', model: 'bookleaf-rules-v1', promptTokens: 0, completionTokens: 0, latencyMs: 0, estimatedCostUsd: 0, success: true, fallback: true, createdAt: hoursAgo(8) },
-      { operation: 'DRAFT', model: 'openai/gpt-oss-120b', promptTokens: 1180, completionTokens: 362, latencyMs: 0, estimatedCostUsd: 0, success: true, cached: true, createdAt: hoursAgo(3) },
-      { operation: 'CLASSIFY', model: 'openai/gpt-oss-20b', promptTokens: 405, completionTokens: 65, latencyMs: 544, estimatedCostUsd: 0.0001, success: true, cached: false, createdAt: hoursAgo(26) },
-      { operation: 'DRAFT', model: 'openai/gpt-oss-120b', promptTokens: 1320, completionTokens: 410, latencyMs: 2680, estimatedCostUsd: 0.00044, success: true, cached: false, createdAt: hoursAgo(30) },
-      { operation: 'CLASSIFY', model: 'openai/gpt-oss-20b', promptTokens: 396, completionTokens: 72, latencyMs: 501, estimatedCostUsd: 0.0001, success: true, cached: false, createdAt: hoursAgo(52) },
-      { operation: 'DRAFT', model: 'openai/gpt-oss-120b', promptTokens: 1090, completionTokens: 320, latencyMs: 2310, estimatedCostUsd: 0.00036, success: true, cached: false, createdAt: hoursAgo(70) },
-    ],
-  });
 
   const counts = {
     authors: await prisma.author.count(),

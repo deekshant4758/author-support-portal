@@ -17,14 +17,16 @@ booksRouter.get(
   '/',
   asyncHandler(async (req, res) => {
     const user = req.user!;
+    if (user.role === 'AUTHOR' && !user.authorId) {
+      throw forbidden('This account is not linked to an author profile.');
+    }
     const requestedAuthorId = typeof req.query.authorId === 'string' ? req.query.authorId : undefined;
 
     if (user.role === 'AUTHOR' && requestedAuthorId && requestedAuthorId !== user.authorId) {
       throw forbidden('You can only view your own books.');
     }
 
-    const authorId =
-      user.role === 'AUTHOR' ? user.authorId : requestedAuthorId ?? undefined;
+    const authorId = user.role === 'AUTHOR' ? user.authorId : (requestedAuthorId ?? undefined);
 
     const books = await prisma.book.findMany({
       where: authorId ? { authorId } : {},

@@ -22,6 +22,7 @@ prisma/dev.db*
 *.log
 coverage/
 test-results/
+tests/
 playwright-report/
 .DS_Store
 Thumbs.db

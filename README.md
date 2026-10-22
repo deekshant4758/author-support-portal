@@ -1,360 +1,169 @@
-# BookLeaf — Author Support & Communication Portal
+# BookLeaf Author Support Portal
 
-A full-stack author support desk for BookLeaf Publishing: authors raise queries against their
-books and see replies live; the operations team works a prioritised queue with AI triage and
-grounded, editable response drafts.
+A full-stack support portal built against the supplied **Author Support & Communication Portal** assignment. Authors manage queries about their books; BookLeaf staff manage tickets with AI classification, priority suggestions and editable response drafts.
 
-Built for the "Author Support & Communication Portal" assignment using the provided sample
-dataset (10 authors, 18 books) and the BookLeaf knowledge base.
+The bundled dataset contains all **10 authors and 18 books**. Seeded conversations and staff accounts are demo fixtures.
 
----
+## Run locally
 
-## 1. What is included
+Use Node.js 20+ and npm. Run the backend and frontend in separate terminals.
 
-**Author portal**
-
-- Email/password login (JWT), scoped to the signed-in author only.
-- Overview dashboard: royalty totals, settlement progress, catalogue state, open threads,
-  account snapshot, production stage for in-flight titles.
-- **My Books**: every title with ISBN, genre, publication date, status, MRP, copies sold,
-  royalty earned/paid/pending, channels, print partner and production stepper.
-- **Submit a query**: book selector (or general/account-level), subject, description, category
-  (auto or manual), attachment (UI-only, metadata stored), live AI triage feedback.
-- **My Tickets** and ticket detail: full conversation, live updates over SSE without a refresh,
-  reply as author, close/resolve handshake, SLA state.
-- **Need a quick answer?**: expand common questions on the dashboard to read knowledge-base
-  answers inline. **Open a new query** remains available for individual support.
-
-**Operations portal**
-
-- **Ticket queue** across all authors: filters (status, category, priority, assignee, date,
-  search), urgency-first sorting, SLA breach/age cues, pagination.
-- **Ticket console**: author + book context, conversation and internal notes, AI copilot panel
-  (category, confidence, priority reason), admin overrides, assignment, status controls,
-  AI draft studio (tone, history toggle, instructions), editable draft, copy/discard/use-in-reply,
-  send reply or private internal note, audit/event log.
-- **AI & Analytics**: queue health, category/priority mix, SLA, AI usage/cost telemetry,
-  fallback and cache rates.
-- **Knowledge base**: browse the exact policy sections the AI is grounded on, with retrieval
-  keywords and the guardrails used.
-
-**AI layer**
-
-- Automatic category + priority triage on ticket creation.
-- Retrieval-grounded draft generation for admins (never auto-sent).
-- Admin can override category/priority and re-run triage.
-- Graceful degradation: rule-based triage and grounded template drafts when Groq is missing,
-  rate-limited or down. Tickets are still created and can always be answered manually.
-- TTL caching, token/cost telemetry per call, prompt-size limits and retry/backoff.
-
----
-
-## 2. Stack and structure
-
-```
-author-support-portal/
-├── backend/                 # Express + TypeScript REST API
-│   ├── prisma/schema.prisma # SQLite schema (Postgres-ready)
-│   ├── src/
-│   │   ├── config/          # env validation (zod)
-│   │   ├── middleware/      # auth, RBAC, validation, errors, rate limits
-│   │   ├── services/        # ticket logic, event bus, AI layer
-│   │   ├── routes/          # auth, authors, books, tickets, admin, knowledge, SSE
-│   │   ├── docs/openapi.ts  # OpenAPI 3 spec served at /api/docs
-│   │   ├── validation/      # zod request schemas
-│   │   └── seed.ts          # loads the provided sample dataset
-│   └── tests/ai.test.mts    # AI unit/integration tests (no network, no Groq key)
-└── frontend/                # React 18 + Vite + TypeScript + Tailwind
-    └── src/{pages,components,store,lib}
-```
-
-**Backend:** Node.js + Express 4 + TypeScript, Prisma 6, SQLite (zero-setup local DB), zod,
-JWT, helmet, CORS allow-list, morgan, express-rate-limit, Swagger UI.
-
-**Frontend:** React 18, React Router, TanStack Query, Tailwind CSS, SSE via `EventSource`.
-No component library — a small design system (`components/ui.tsx`) keeps the BookLeaf visual
-language consistent and avoids heavy dependencies.
-
-**Why this stack:** the assignment scores schema/API design over the specific database. SQLite
-with Prisma gives a one-command local setup and an easy switch to PostgreSQL for deployment;
-TypeScript on both sides keeps the API contract honest; TanStack Query + SSE provide caching,
-retries and live updates with very little custom state code.
-
----
-
-## 3. Run locally
-
-Prerequisites: Node.js 20+ (developed on Node 22), npm.
-
-### Backend
-
-```bash
+```powershell
 cd backend
-npm install
-cp .env.example .env        # Windows: copy .env.example .env
-# edit .env and set GROQ_API_KEY (leave empty to run in deterministic fallback mode)
-npm run setup               # prisma generate + db push + seed
-npm run dev                 # http://localhost:4000
+npm ci
+Copy-Item .env.example .env
+npm run setup
+npm run dev
 ```
 
-`npm run setup` seeds the 10 authors / 18 books from the provided dataset plus a realistic
-ticket history. `npm run db:reset` rebuilds the database from scratch.
+`setup` generates the Prisma client, creates the SQLite schema and seeds the database. **The seed deletes existing application records before inserting demo data. Run setup only for a fresh demo database.** For an existing database, use `npm run prisma:generate` and `npm run db:push` without seeding. Do not overwrite an existing `.env`.
 
-### Frontend
-
-```bash
+```powershell
 cd frontend
-npm install
-npm run dev                 # http://localhost:5173
+npm ci
+npm run dev
 ```
 
-Vite proxies `/api` to `http://localhost:4000`. For a split deployment set
-`VITE_API_URL=https://your-api.example.com/api/v1` (see `frontend/.env.example`) and add the
-frontend origin to `CLIENT_ORIGIN` on the API.
+Open [http://localhost:5173](http://localhost:5173). The API runs on port 4000. Vite proxies `/api` to the backend.
 
-### Demo accounts — password `bookleaf123`
+In `backend/.env`, set `GROQ_API_KEY` to enable the live provider. With no key, or with `AI_ENABLED=false`, ticket creation uses classification rules and response drafting uses policy-based templates. The rest of the portal remains usable.
 
-The sign-in page opens with an empty author login form. Enter an author account below to
-open the author desk, or choose **Admin login** beneath the form to sign in as an operations
-team member. Use **Back to author login** to return. Demo credentials are documented here
-and are not displayed or prefilled in the application.
+## Demo logins
 
-| Role | Email | Notes |
+All seeded accounts use password **`bookleaf123`**. Credentials are documented here and are not displayed or prefilled in the login page.
+
+The default form is **Author sign in**. Use the **Admin login** button below it for staff access.
+
+| Role | Email | Useful scenario |
 | --- | --- | --- |
-| Admin / ops lead | `admin@bookleaf.in` | Pooja Mehta, full queue + AI console |
-| Admin / production | `raghav@bookleaf.in` | Second specialist for assignment tests |
-| Author | `priya.sharma@email.com` | 2 titles, live + pending royalty, open thread |
-| Author | `meera.nair@email.com` | Distribution/unavailable listing case |
-| Author | `sneha.kulkarni@email.com` | Title in production (live stepper) |
-| Author | `arjun.malhotra@email.com` | Zero-royalty / early-stage catalogue edge case |
+| Admin | `admin@bookleaf.in` | Full ticket management |
+| Admin | `raghav@bookleaf.in` | Assignment to another staff member |
+| Admin | `siddharth@bookleaf.in` | Additional staff account |
+| Author | `priya.sharma@email.com` | Published books and pending royalties |
+| Author | `rohit.kapoor@email.com` | Multiple books |
+| Author | `ananya.reddy@email.com` | Single-book account |
+| Author | `vikram.joshi@email.com` | Multiple books |
+| Author | `meera.nair@email.com` | Distribution support example |
+| Author | `arjun.malhotra@email.com` | Single-book account |
+| Author | `sneha.kulkarni@email.com` | Published and production books |
+| Author | `farhan.sheikh@email.com` | Single-book account |
+| Author | `kavita.deshmukh@email.com` | Production book with zero royalties |
+| Author | `diya.chatterjee@email.com` | Multiple books |
 
-All ten authors from the dataset can sign in with the same password
-(`ananya.reddy@`, `diya.chatterjee@`, `farhan.sheikh@`, `kavita.deshmukh@`,
-`rohit.kapoor@`, `vikram.joshi@` + `email.com`).
+## Portal behavior
 
-### Useful endpoints
+**Authors** see an overview with sales and royalty totals, recent tickets, production progress and expandable quick answers. My Books includes the required title, ISBN, genre, publication date, status, MRP, copies sold and earned/paid/pending royalties, plus available distribution details. Missing dates and zero values are supported.
 
-- API health: `http://localhost:4000/health`
-- Swagger UI: `http://localhost:4000/api/docs`
-- OpenAPI JSON: `http://localhost:4000/api/docs.json`
+Submitting a query requires a book dropdown (including General / Account Level), subject and description. An optional attachment stores its filename and size only; the file is not uploaded. My Tickets supports search, status filters and pagination. A ticket shows the original query and public conversation. Authors can reply, reopen a resolved ticket by replying, and close their own ticket.
 
----
+**Admins** have a queue with status, category, priority, assignee, date and search filters. Urgency ordering places unresolved tickets first, then priority and age. Overdue indicators use configured demo targets, not a promise of a customer response time.
 
-## 4. Architecture
+Opening an admin ticket automatically loads one suggested draft. Staff can edit it, regenerate it with a tone or instructions, move it into the reply box, and explicitly send it. A failed draft request leaves manual replies available. Staff can override classification and priority, change status, assign themselves or another staff member, and add private notes.
 
-```
-React SPA ──REST /api/v1──► Express (JWT auth → RBAC → zod validation → routes)
-   │                              │
-   └──── SSE /api/v1/events ◄──── event bus (per-author + admin channels)
-                                  │
-                     ticket service ──► Prisma ──► SQLite / Postgres
-                                  │
-                          AI orchestration
-                     (triage → retrieval → draft)
-                                  │
-                             Groq API (server-only key)
-```
+Public replies update the owning author's conversation through Server-Sent Events (SSE). An author's own reply produces a send confirmation; only a public staff reply produces “BookLeaf replied to your ticket.” Internal notes stay on admin streams.
 
-**Request flow for a new ticket**
+The full knowledge base is server-side AI context. There is no knowledge-base or analytics page in either portal. Only two useful FAQ answers are returned to authors for inline reading.
 
-1. `POST /tickets` authenticates the author, validates input and loads the selected book.
-2. `classifyTicket()` asks Groq for strict JSON (category, priority, confidence, reason). On any
-   failure it uses the weighted rule engine. The ticket is **always created**.
-3. Ticket + first author message + system acknowledgement + triage audit event are persisted in
-   one Prisma write.
-4. `ticket.created` is published to the SSE bus (author channel + admin channel).
-5. The admin console opens the ticket, calls `POST /tickets/:id/ai/draft`. The drafter retrieves
-   2–3 relevant knowledge sections, builds a compact prompt, and returns an editable draft with
-   token/cost metadata. Nothing is sent automatically: the admin edits and submits a message.
+## Architecture
 
-**Database (Prisma):** `User` (role `AUTHOR`/`ADMIN`, 1:1 optional `Author`), `Author`, `Book`,
-`Ticket` (category/priority plus AI originals for override tracking), `Message`
-(`AUTHOR`/`ADMIN`/`SYSTEM`, `isInternal`), `TicketEvent` (audit trail, AI metadata),
-`AiUsage` (operation, model, tokens, latency, cost, fallback/cache flags).
-
-**Security:** passwords hashed with bcrypt; JWT in `Authorization: Bearer`; `authenticate`
-and `requireAdmin`/`requireAuthor` middleware on every protected route; ownership checks in the
-ticket service (authors only see their own tickets/books); internal notes filtered out of author
-payloads **and** out of the author SSE stream; helmet, CORS allow-list, body limits, login and AI
-rate limits; no secrets in the frontend; `.env` git-ignored.
-
-**Errors:** a typed `AppError` plus a single error middleware return a consistent envelope:
-
-```json
-{ "error": { "code": "VALIDATION_ERROR", "message": "…", "details": { "subject": ["…"] } } }
+```text
+frontend/   React + TypeScript + Vite + Tailwind + TanStack Query
+backend/    Express + TypeScript + Zod + Prisma + SQLite
+            REST /api/v1 + role-scoped SSE
+            Server-only Groq client, prompts, retrieval, rules and templates
 ```
 
----
+React keeps remote data in TanStack Query; live events invalidate affected queries. Express handles authentication, role checks and validation before service work. Prisma models users, authors, books, tickets, messages, ticket events and actual AI usage.
 
-## 5. Real-time updates
+SQLite keeps the assignment easy to run locally. PostgreSQL would suit a shared production deployment; that requires changing the Prisma provider and preparing migrations, not just changing the database URL.
 
-Server-Sent Events (`GET /api/v1/events?token=…`) push `ticket.created`, `ticket.updated`,
-`ticket.message` and `ticket.closed`. The event bus keeps one connection per client, scopes
-events by author id, and sends a heartbeat so proxies do not close idle streams. The frontend
-reconnects with backoff, invalidates the relevant TanStack Query caches and shows a "Live sync"
-indicator. Internal notes are never emitted to the author's channel.
+Passwords are hashed with bcrypt. Protected API requests require a JWT and enforce author ownership on the server. Staff-only operations reject author sessions. The browser stores the session token locally; the native EventSource connection passes it as a query parameter, which application request logs redact. Environment files and local databases are ignored by Git.
 
----
+## AI integration
 
-## 6. AI integration
+- **Model choice:** Groq is used through its OpenAI-compatible HTTP API. The configured smaller model, `openai/gpt-oss-20b`, handles bounded structured classification; `openai/gpt-oss-120b` handles natural-language drafts. Separate environment settings allow changing either model without changing the portal.
+- **Classification:** the subject, a bounded description and relevant book facts produce a category, priority, confidence and brief rationale. Categories and priorities are checked before persistence. Admin overrides preserve the original suggestions for review.
+- **Grounding:** the assignment's BookLeaf policies are split into tagged sections. Drafting retrieves up to three relevant sections, includes real book figures and at most two recent public messages, and requests an empathetic reply with a clear next step. Private notes are excluded. Prompts also describe the implemented portal's limits so replies do not direct authors to nonexistent bank-editing or per-platform sales controls.
+- **Failure handling:** timeouts, rate limits, invalid output and provider errors fall back to deterministic rules or templates. Drafts are always reviewed by staff; nothing is sent automatically.
+- **Cost control:** classification output is capped at 300 tokens; drafting at 700. Input text/history is bounded. Classification is cached for 30 minutes and drafts for 15 minutes, with draft keys including the last public message, category, priority and generation options. In-memory caches are bounded. AI endpoints are rate-limited.
+- **Usage:** real model tokens, latency, cache/fallback status and estimated cost are recorded internally. Pricing settings are estimates maintained by the operator. No invented usage is seeded and no token/cost telemetry is presented in the portal.
 
-### Models
+## API documentation
 
-| Job | Default model | Why |
+With the backend running:
+
+- [Swagger UI](http://localhost:4000/api/docs)
+- [OpenAPI JSON](http://localhost:4000/api/openapi.json)
+- [Health endpoint](http://localhost:4000/health)
+
+Business routes use `/api/v1`. Except login, they require `Authorization: Bearer <token>`. The SSE route accepts `?token=<token>` instead.
+
+| Method | Path | Access and purpose |
 | --- | --- | --- |
-| Triage (classification + priority) | `openai/gpt-oss-20b` on Groq | Small, cheap and fast; structured JSON-only task |
-| Drafting | `openai/gpt-oss-120b` on Groq | Better tone/instruction following for author-facing prose |
+| POST | `/auth/login` | Sign in |
+| GET | `/auth/me` | Current authenticated user |
+| POST | `/auth/logout` | Client discards the session token |
+| GET | `/authors/me` | Author profile, complete catalogue, totals and recent tickets |
+| GET | `/books` | Own books; admins may filter by `authorId` |
+| GET | `/books/:id` | Book details with ownership checks |
+| GET | `/tickets` | Scoped, filtered and paginated ticket list |
+| POST | `/tickets` | Author creates a query |
+| GET | `/tickets/:id` | Conversation; authors receive public messages only |
+| PATCH | `/tickets/:id` | Admin status, category, priority or assignment |
+| POST | `/tickets/:id/messages` | Public reply; admins may set `isInternal` |
+| POST | `/tickets/:id/close` | Author closes own ticket; admins may close any ticket |
+| POST | `/tickets/:id/assign` | Admin assigns or unassigns |
+| POST | `/tickets/:id/ai/draft` | Admin requests an editable response suggestion |
+| POST | `/tickets/:id/ai/reclassify` | Admin reruns classification |
+| GET | `/admin/stats` | Admin queue statistics |
+| GET | `/admin/team` | Staff assignment options |
+| GET | `/admin/authors` | Admin author list |
+| GET | `/admin/ai/usage` | Internal usage records |
+| GET | `/knowledge-base` | Admin-only policy context, no portal page |
+| GET | `/knowledge-base/answers` | Authenticated inline FAQs |
+| GET | `/events` | Role- and author-scoped event stream |
 
-Both are configurable via `GROQ_MODEL_CLASSIFY` / `GROQ_MODEL_DRAFT`. Groq's OpenAI-compatible
-API means the same client works with any compatible provider by changing `GROQ_BASE_URL`.
+Ticket detail and mutation routes accept either an internal ID or the public ticket reference. List parameters include `status`, `category`, `priority`, `assignee`, `dateFrom`, `dateTo`, `search`, `sort`, `page` and `pageSize`; see Swagger for allowed values. Responses use `{ data, meta? }` or `{ error: { code, message, details? } }`.
 
-### Prompt strategy
+## Verification
 
-- **Triage system prompt** contains the exact six categories, an explicit priority rubric with
-  BookLeaf-specific examples (overdue royalty, ISBN mismatch, unavailable listing), and rules to
-  return strict JSON only. Confidence must be a real 0–1 estimate, not a constant.
-- **Draft system prompt** encodes the BookLeaf voice: empathy first, own mistakes, be concrete,
-  never invent amounts/dates, commit to a 48-hour follow-up, ask only for the minimum missing
-  information, 120–220 words, plain text with `Hi <first name>,` … `Warmly, BookLeaf Author
-  Support`, and no mention of AI.
-- **Grounding:** account facts (title, ISBN, MRP, copies sold, royalty earned/paid/pending,
-  production stage, tier, city) and retrieved policy extracts are passed as context; the prompt
-  explicitly forbids claims outside them.
-- **Tone modes:** Empathetic (default), Concise, Escalation; admins can add short instructions.
-- **Human in the loop:** drafts are never auto-sent. The event log records `DRAFT_GENERATED`
-  with model and source, and the UI is labelled "AI suggestion · human review required".
-
-### Knowledge retrieval (cost control)
-
-The knowledge base is split into small tagged sections (royalty, ISBN, printing, distribution,
-production stages, tone/policies, company). For each draft the backend scores sections by
-category + keyword overlap and sends only the top 3 (~500–800 tokens) instead of the whole KB.
-Only the last two public messages are included by default (history toggle). Ticket text is
-truncated for triage. Exact response caching keyed by ticket content + tone + instructions
-prevents duplicate spend; cache hits are logged with zero tokens and zero marginal cost.
-
-### Reliability and observability
-
-- 15 s timeout, one retry with jittered backoff on 429/5xx/timeouts, automatic one-time retry
-  without `response_format` if the model rejects JSON mode.
-- Invalid JSON, unknown category/priority or an empty completion are treated as failures.
-- Every failure falls back: **rule engine** for triage (weighted phrases + account signals) and
-  **grounded template** for drafts (policy-accurate, real numbers, no invented facts).
-- `AiUsage` stores model, operation, tokens, latency, estimated USD cost, success, fallback and
-  cache flags; `/admin/ai/usage` and **AI & Analytics** surface totals and fallback rate.
-- API keys live only in `backend/.env`; requests to Groq happen only on the server.
-
-### Tests
-
-```bash
+```powershell
 cd backend
-npm test          # 7 tests: heuristics, AI JSON parsing, invalid-AI fallback, draft cost, template fallback
-npm run typecheck
+npm test
+npm run build
 ```
 
-Frontend browser checks use isolated API fixtures and simulated live messages; they do not
-modify the development database:
+The backend suite creates and seeds temporary databases, leaving the development database untouched. It covers all sample records, ownership/RBAC, validation, fallback AI, concurrent submissions, drafts, overrides, assignment, private notes, lifecycle, pagination beyond 500 tickets, overdue counts and scoped live events.
 
-```bash
+```powershell
 cd frontend
 npx playwright install chromium
 npm test
 npm run build
 ```
 
-The browser suite covers separate author/admin login, role mismatches, inline quick answers
-on desktop and mobile, and author/admin reply notifications. To use an installed Chrome
-instead, set `PLAYWRIGHT_CHANNEL=chrome` (`$env:PLAYWRIGHT_CHANNEL = 'chrome'` in PowerShell)
-before running `npm test`.
+Alternatively, use installed Chrome on Windows:
 
----
+```powershell
+$env:PLAYWRIGHT_CHANNEL = 'chrome'
+npm test
+```
 
-## 7. API reference
+Browser tests use isolated API/EventSource fixtures. They cover role-specific login, empty credential fields, inline keyboard-accessible FAQs, mobile layouts, reply notifications, automatic editable drafts, manual replies after draft errors, query validation, book edge cases and pagination. They complement the backend integration tests; they are not a deployed end-to-end test.
 
-Base URL: `/api/v1`. Protected routes need `Authorization: Bearer <jwt>`.
-OpenAPI/Swagger is generated in `backend/src/docs/openapi.ts` and served at `/api/docs`.
+The latest local audit passed **18 backend tests and 9 browser tests**. A separate synthetic-data smoke check successfully called both configured Groq models. See [assignment audit](docs/ASSIGNMENT-AUDIT.md) and the [one-page approach write-up](BRIEF-WRITEUP.md).
 
-### Auth
+## Deployment and limitations
 
-| Method | Path | Access | Purpose |
-| --- | --- | --- | --- |
-| POST | `/auth/login` | public (rate-limited) | Email/password login, returns JWT + user |
-| GET | `/auth/me` | any | Current user + author profile |
-| POST | `/auth/logout` | any | Stateless logout acknowledgement |
+A live URL and public repository visibility have **not been verified**. They remain submission deliverables; no deployment URL is invented here.
 
-### Author portal
+For a deployment, build both applications, run the compiled backend with `npm start`, serve `frontend/dist` with SPA route fallback, configure `CLIENT_ORIGIN`, a strong `JWT_SECRET` and the server-only Groq key, and use persistent database storage. For separate frontend/API origins, set `VITE_API_URL` (including `/api/v1`) before building the frontend. Ensure the proxy supports SSE without response buffering.
 
-| Method | Path | Access | Purpose |
-| --- | --- | --- | --- |
-| GET | `/authors/me` | author | Profile, stats, bank details |
-| GET | `/books` | author | Own catalogue (+ admin can pass `authorId`) |
-| GET | `/books/:id` | owner/admin | Book detail + royalty breakdown |
-| POST | `/tickets` | author | Create ticket; AI triage in `meta.triage` |
-| GET | `/tickets` | any | List; authors are scoped to their own tickets |
-| GET | `/tickets/:id` | owner/admin | Thread, messages, events, book, SLA |
-| POST | `/tickets/:id/messages` | owner/admin | Public reply or admin internal note |
-| POST | `/tickets/:id/close` | owner/admin | Close ticket |
-| GET | `/knowledge` | any | Knowledge base sections used for grounding |
-| GET | `/events` | any (token) | SSE stream scoped by role |
+Known limits:
 
-### Operations portal
-
-| Method | Path | Access | Purpose |
-| --- | --- | --- | --- |
-| PATCH | `/tickets/:id` | admin | Status, category, priority, assignee overrides |
-| POST | `/tickets/:id/assign` | admin | Assign to a specialist (`"me"` for self) |
-| POST | `/tickets/:id/ai/draft` | admin | Generate grounded draft (tone/history/instructions) |
-| POST | `/tickets/:id/ai/reclassify` | admin | Re-run AI triage, discarding overrides |
-| GET | `/admin/stats` | admin | Volume, SLA, category/priority mix, AI metrics |
-| GET | `/admin/team` | admin | Specialists + assignment load |
-| GET | `/admin/authors` | admin | Author directory with counts |
-| GET | `/admin/ai/usage` | admin | Recent AI calls and costs |
-
-Ticket endpoints accept either the internal id or the public ticket number (`TKT-####`).
-List filtering: `status`, `category`, `priority`, `assignee`, `dateFrom`, `dateTo`, `search`,
-`sort=urgency|oldest|newest|updated`, `page`, `pageSize`.
-
-**Rate limits:** login 20/15 min, writes 120/min, AI draft 20/5 min per IP.
-
----
-
-## 8. Deployment notes
-
-The repo is split into independent `backend/` and `frontend/` apps (no workspace coupling).
-
-1. **Database:** set `DATABASE_URL`. On a managed Postgres, change the Prisma provider to
-   `postgresql`, run `npx prisma migrate deploy` (or `db push`) and `npm run db:seed`.
-2. **Backend:** deploy `backend/` (Render/Railway/Fly/VPS). Set `JWT_SECRET`, `CLIENT_ORIGIN`
-   (the deployed frontend origin), `GROQ_API_KEY`, and `NODE_ENV=production`; run `npm run build`
-   and `npm start`. SQLite on ephemeral filesystems will lose data — use Postgres for a live demo.
-3. **Frontend:** deploy `frontend/` to Vercel/Netlify. Set `VITE_API_URL` to the API base
-   (`https://…/api/v1`) at build time. The app uses same-origin `/api/v1` when unset.
-4. SSE works through most platforms; if a proxy buffers responses, disable buffering for
-   `/api/v1/events`.
-
-A live demo URL is not included in this repository; deploy steps above produce one without code
-changes. All demo data is seeded from the provided JSON.
-
----
-
-## 9. Trade-offs, limitations and next steps
-
-- **SQLite by default** keeps setup one command; production should use Postgres (schema is
-  provider-agnostic apart from the provider line).
-- **SSE + in-process event bus** is enough for a single instance. Horizontal scaling needs a
-  shared pub/sub (Redis) for events and the AI cache.
-- **Attachments are UI-only** (name + size metadata), as the brief allows. Real uploads would use
-  signed S3/R2 URLs with virus scanning.
-- **No email notifications** yet; the portal is the source of truth. Transactional email for
-  "desk replied" is the obvious next step.
-- **Auth is deliberately simple** (email/password, 8 h JWT). Production would add refresh tokens,
-  password reset, SSO for staff and audit-log immutability.
-- **Knowledge retrieval is lexical** (category + keyword scoring). With more documents, move to
-  embeddings + pgvector with the same interface.
-- **AI cost controls** are TTL caches, compact prompts, top-3 retrieval and per-call telemetry;
-  a production system would add org-level budgets and prompt-version tracking (partial in
-  `AiUsage`/event metadata already).
-- **Author “reply” behaviour** reopens resolved tickets automatically; the exact SLA policy is
-  configurable in `lib/constants.ts`.
-
-See `BRIEF-WRITEUP.md` for the one-page approach summary.
+- Attachments are UI-only filename references, as allowed by the assignment. There is no file storage, finance integration, bank editor, actual payout/reprint automation or email notification service.
+- The supplied dataset has aggregate sales/royalties, without per-platform transaction figures. No platform breakdown is fabricated.
+- Demo support conversations are synthetic; production stages derive from book status. The seed does not invent bank details, paid-package membership or production delay explanations.
+- AI suggestions need staff review and cannot guarantee classification or response accuracy. External actions described in a reply require staff to carry them out.
+- SQLite, caches and SSE subscribers are local to one backend instance. Production scaling needs a shared database/event transport, durable job handling and missed-event recovery.
+- Session expiry, password recovery and token revocation need a fuller production authentication flow.

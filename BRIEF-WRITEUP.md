@@ -1,0 +1,13 @@
+# Approach and trade-offs
+
+The priority was a complete author-to-support loop: authors see only their own catalogue, submit a book or account query, and receive replies without refreshing. Staff get a queue ordered around unresolved work, editable AI help and the controls needed to resolve the ticket. The interface keeps policy documents, usage telemetry and implementation details out of these daily tasks.
+
+React and TypeScript provide a small client application with shared types and reusable controls. TanStack Query manages server data; scoped SSE events refresh affected conversations and lists. Express separates authentication, validation, route handling and domain services. Prisma with SQLite makes the supplied 10-author, 18-book dataset easy to run locally. Public ticket references support direct lookup while server ownership checks protect the underlying records.
+
+AI assists two bounded decisions. A smaller Groq-hosted model returns structured category and priority suggestions; a larger model writes a support draft from the ticket, book facts, selected BookLeaf policy sections and a short public conversation. Prompts require specific facts, an empathetic tone and a clear next step. Model output is never sent automatically: opening a ticket presents an editable suggestion and staff explicitly send the final reply. Internal notes are excluded from response context.
+
+Provider latency and cost are limited with input/output bounds, retrieval of up to three policy sections, short bounded caches, timeouts, retries and rate limits. Invalid classification or provider failure invokes rules and policy-based templates. Manual replying remains available. Actual usage is recorded internally, with configurable estimated prices. The API key stays in backend environment configuration.
+
+The main trade-offs are deliberate: attachments store metadata only; sales figures remain aggregate because the dataset has no platform transactions; demo conversations illustrate workflows without pretending to execute payouts, reprints or external updates. SQLite and in-process events suit a single-instance assignment demo but do not provide distributed delivery. Browser fixtures test interface behavior separately from API integration tests against freshly seeded temporary databases.
+
+For production I would introduce PostgreSQL migrations, durable background jobs for AI and notifications, shared events with replay, secure file storage, a stronger session/recovery flow and operational integrations. I would evaluate classification and response quality against reviewed examples before expanding automation. The source and documentation are ready for deployment review; a public repository and reachable live demo still require verification.

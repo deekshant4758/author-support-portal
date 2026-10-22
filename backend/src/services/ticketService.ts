@@ -1,16 +1,18 @@
 import type { Prisma } from '@prisma/client';
+import { randomBytes } from 'node:crypto';
 import type { Request } from 'express';
 import { prisma } from '../lib/prisma';
 import { badRequest, forbidden, notFound } from '../lib/errors';
 import {
   PRIORITY_WEIGHT,
+  SLA_HOURS,
   TICKET_CATEGORIES,
   TICKET_PRIORITIES,
   TICKET_STATUSES,
   type TicketPriority,
   type TicketStatus,
 } from '../lib/constants';
-import { serializeTicket } from '../lib/serialize';
+import { serializeBook, serializeTicket } from '../lib/serialize';
 import type { TicketQueryInput } from '../validation/schemas';
 
 export const ticketInclude = {
@@ -31,23 +33,14 @@ export const ticketDetailInclude = (isAdmin: boolean) =>
       orderBy: { createdAt: 'asc' },
     },
     events: {
-      where: isAdmin
-        ? {}
-        : { type: { in: ['CREATED', 'STATUS_CHANGED', 'PUBLIC_REPLY', 'CLOSED', 'AI_TRIAGE'] } },
+      where: isAdmin ? {} : { type: { in: ['CREATED', 'STATUS_CHANGED', 'PUBLIC_REPLY', 'CLOSED'] } },
       orderBy: { createdAt: 'asc' },
     },
     _count: { select: { messages: { where: { isInternal: false } } } },
   }) satisfies Prisma.TicketInclude;
 
-export const generatePublicId = async (): Promise<string> => {
-  const total = await prisma.ticket.count();
-  for (let offset = 1; offset <= 100; offset += 1) {
-    const candidate = `TKT-${9000 + total + offset}`;
-    const existing = await prisma.ticket.findUnique({ where: { publicId: candidate }, select: { id: true } });
-    if (!existing) return candidate;
-  }
-  return `TKT-${Date.now().toString().slice(-6)}`;
-};
+// Generate references independently so simultaneous submissions cannot share a counter value.
+export const generatePublicId = (): string => `TKT-${randomBytes(8).toString('hex').toUpperCase()}`;
 
 const splitFilter = (value: string | undefined): string[] =>
   (value ?? '')
@@ -75,10 +68,7 @@ const parseDate = (value: string | undefined, label: string): Date | undefined =
   return date;
 };
 
-export const buildTicketWhere = (
-  req: Request,
-  query: TicketQueryInput,
-): Prisma.TicketWhereInput => {
+export const buildTicketWhere = (req: Request, query: TicketQueryInput): Prisma.TicketWhereInput => {
   const user = req.user!;
   const where: Prisma.TicketWhereInput = {};
 
@@ -97,6 +87,7 @@ export const buildTicketWhere = (
 
   const from = parseDate(query.dateFrom, 'dateFrom');
   const to = parseDate(query.dateTo, 'dateTo');
+  if (from && to && from > to) throw badRequest('dateFrom must be before dateTo.');
   if (from || to) {
     where.createdAt = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
   }
@@ -132,17 +123,16 @@ export const listTickets = async (req: Request, query: TicketQueryInput) => {
       where,
       include: ticketInclude,
       orderBy: { createdAt: 'asc' },
-      take: 500,
     });
 
     const sorted = all.sort((a, b) => {
+      const resolvedA = a.status === 'RESOLVED' || a.status === 'CLOSED' ? 1 : 0;
+      const resolvedB = b.status === 'RESOLVED' || b.status === 'CLOSED' ? 1 : 0;
+      if (resolvedA !== resolvedB) return resolvedA - resolvedB;
       const weightDiff =
         (PRIORITY_WEIGHT[b.priority as TicketPriority] ?? 0) -
         (PRIORITY_WEIGHT[a.priority as TicketPriority] ?? 0);
       if (weightDiff !== 0) return weightDiff;
-      const resolvedA = a.status === 'RESOLVED' || a.status === 'CLOSED' ? 1 : 0;
-      const resolvedB = b.status === 'RESOLVED' || b.status === 'CLOSED' ? 1 : 0;
-      if (resolvedA !== resolvedB) return resolvedA - resolvedB;
       return a.createdAt.getTime() - b.createdAt.getTime();
     });
 
@@ -187,8 +177,8 @@ export const getTicketForUser = async (
   options: { includeInternal: boolean },
 ) => {
   const isAdmin = request.user!.role === 'ADMIN';
-  const ticket = await prisma.ticket.findUnique({
-    where: { id },
+  const ticket = await prisma.ticket.findFirst({
+    where: { OR: [{ id }, { publicId: id }] },
     include: ticketDetailInclude(options.includeInternal && isAdmin),
   });
 
@@ -259,6 +249,7 @@ export const authorSummary = async (authorId: string) => {
       royaltyPending: totals.pending,
       totalCopiesSold: totals.copies,
     },
+    books: books.map(serializeBook),
     recentTickets: tickets.map(serializeTicket),
   };
 };
@@ -269,9 +260,15 @@ export interface StatsFilters {
 }
 
 export const buildAdminStats = async (filters: StatsFilters = {}) => {
-  const dateWhere = filters.from || filters.to
-    ? { createdAt: { ...(filters.from ? { gte: filters.from } : {}), ...(filters.to ? { lte: filters.to } : {}) } }
-    : {};
+  const dateWhere =
+    filters.from || filters.to
+      ? {
+          createdAt: {
+            ...(filters.from ? { gte: filters.from } : {}),
+            ...(filters.to ? { lte: filters.to } : {}),
+          },
+        }
+      : {};
 
   const [
     total,
@@ -295,14 +292,23 @@ export const buildAdminStats = async (filters: StatsFilters = {}) => {
     prisma.ticket.count({ where: { ...dateWhere, status: 'IN_PROGRESS' } }),
     prisma.ticket.count({ where: { ...dateWhere, status: 'RESOLVED' } }),
     prisma.ticket.count({ where: { ...dateWhere, status: 'CLOSED' } }),
-    prisma.ticket.count({ where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, priority: 'CRITICAL' } }),
-    prisma.ticket.count({ where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, priority: 'HIGH' } }),
-    prisma.ticket.count({ where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, assignedToId: null } }),
+    prisma.ticket.count({
+      where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, priority: 'CRITICAL' },
+    }),
+    prisma.ticket.count({
+      where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, priority: 'HIGH' },
+    }),
+    prisma.ticket.count({
+      where: { ...dateWhere, status: { in: ['OPEN', 'IN_PROGRESS'] }, assignedToId: null },
+    }),
     prisma.ticket.count({
       where: {
         ...dateWhere,
         status: { in: ['RESOLVED', 'CLOSED'] },
-        resolvedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        OR: [
+          { resolvedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+          { closedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } },
+        ],
       },
     }),
     prisma.ticket.groupBy({ by: ['category'], where: dateWhere, _count: { _all: true } }),
@@ -316,20 +322,18 @@ export const buildAdminStats = async (filters: StatsFilters = {}) => {
       where: {
         ...dateWhere,
         status: { in: ['OPEN', 'IN_PROGRESS'] },
-        priority: 'CRITICAL',
-        createdAt: { lt: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+        OR: Object.entries(SLA_HOURS).map(([priority, hours]) => ({
+          priority,
+          createdAt: { lt: new Date(Date.now() - hours * 60 * 60 * 1000) },
+        })),
       },
     }),
     prisma.aiUsage.findMany({ where: dateWhere, orderBy: { createdAt: 'desc' }, take: 1000 }),
     prisma.ticket.count({ where: { ...dateWhere, categorySource: 'AI' } }),
   ]);
 
-  const categoryCounts = Object.fromEntries(
-    allForCategory.map((row) => [row.category, row._count._all]),
-  );
-  const priorityCounts = Object.fromEntries(
-    allForPriority.map((row) => [row.priority, row._count._all]),
-  );
+  const categoryCounts = Object.fromEntries(allForCategory.map((row) => [row.category, row._count._all]));
+  const priorityCounts = Object.fromEntries(allForPriority.map((row) => [row.priority, row._count._all]));
 
   const avgFirstResponseMinutes =
     respondedTickets.length === 0
@@ -347,10 +351,7 @@ export const buildAdminStats = async (filters: StatsFilters = {}) => {
   const aiCalls = aiUsage.length;
   const fallbacks = aiUsage.filter((entry) => entry.fallback).length;
   const cacheHits = aiUsage.filter((entry) => entry.cached).length;
-  const tokens = aiUsage.reduce(
-    (sum, entry) => sum + entry.promptTokens + entry.completionTokens,
-    0,
-  );
+  const tokens = aiUsage.reduce((sum, entry) => sum + entry.promptTokens + entry.completionTokens, 0);
   const cost = aiUsage.reduce((sum, entry) => sum + entry.estimatedCostUsd, 0);
   const avgLatency =
     aiCalls === 0
@@ -382,7 +383,10 @@ export const buildAdminStats = async (filters: StatsFilters = {}) => {
     avgFirstResponseMinutes,
     categories: countBy([...TICKET_CATEGORIES], categoryCounts),
     priorities: countBy([...TICKET_PRIORITIES], priorityCounts),
-    statuses: { OPEN: open, IN_PROGRESS: inProgress, RESOLVED: resolved, CLOSED: closed } as Record<TicketStatus, number>,
+    statuses: { OPEN: open, IN_PROGRESS: inProgress, RESOLVED: resolved, CLOSED: closed } as Record<
+      TicketStatus,
+      number
+    >,
     ai: {
       calls: aiCalls,
       fallbacks,

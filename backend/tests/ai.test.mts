@@ -5,8 +5,13 @@
  * Run from backend/: npm test
  */
 import assert from 'node:assert/strict';
-import { afterEach, test } from 'node:test';
+import { after, afterEach, test } from 'node:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
 
+const testDirectory = await mkdtemp(join(tmpdir(), 'bookleaf-ai-test-'));
+process.env.DATABASE_URL = `file:${join(testDirectory, 'usage.db').replaceAll('\\', '/')}`;
 process.env.NODE_ENV = 'test';
 process.env.GROQ_API_KEY = 'test-key';
 process.env.AI_ENABLED = 'true';
@@ -15,6 +20,15 @@ process.env.AI_MAX_RETRIES = '0';
 const { heuristicClassify, heuristicPriority, templateDraft } = await import('../src/services/ai/fallback');
 const { classifyTicket } = await import('../src/services/ai/classifier');
 const { generateDraft } = await import('../src/services/ai/drafter');
+const { prisma } = await import('../src/lib/prisma');
+prisma.aiUsage.create = async () => ({}) as never;
+
+after(async () => {
+  await prisma.$disconnect();
+  assert.equal(dirname(resolve(testDirectory)), resolve(tmpdir()));
+  assert.ok(basename(testDirectory).startsWith('bookleaf-ai-test-'));
+  await rm(testDirectory, { recursive: true, force: true });
+});
 
 const realFetch = global.fetch;
 
@@ -123,7 +137,9 @@ test('AI draft is returned with token cost and grounded knowledge sections', asy
 
 test('AI draft falls back to a grounded template when Groq fails', async () => {
   global.fetch = (async () =>
-    new Response(JSON.stringify({ error: { message: 'upstream exploded' } }), { status: 500 })) as typeof fetch;
+    new Response(JSON.stringify({ error: { message: 'upstream exploded' } }), {
+      status: 500,
+    })) as typeof fetch;
 
   const result = await generateDraft(
     { ...ticketFixture('Royalty payout still pending'), authorName: 'Priya Sharma' },
@@ -149,6 +165,18 @@ test('template draft references real ticket data and the BookLeaf policy', () =>
   assert.match(body, /₹3,570/);
   assert.match(body, /45 days/);
   assert.match(body, /bookleaf author support/i);
+  assert.doesNotMatch(body, /update them in your dashboard|confirmed payout date/i);
+});
+
+test('metadata fallback gives the actual update timeline instead of an ISBN escalation', () => {
+  const fixture = ticketFixture('Can I update my author bio?');
+  const body = templateDraft({
+    ticket: { ...fixture.ticket, category: 'GENERAL_INQUIRY' },
+    authorName: 'Priya Sharma',
+  });
+  assert.match(body, /3–5 business days/);
+  assert.match(body, /exact replacement text/);
+  assert.doesNotMatch(body, /48 hours|high-priority|in-house printing/);
 });
 
 function ticketFixture(subject: string) {
