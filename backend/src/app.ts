@@ -30,12 +30,26 @@ export const createApp = () => {
   );
 
   app.use(
-    cors({
-      origin: (origin, callback) => {
-        if (!origin || env.allowedOrigins.includes(origin)) return callback(null, true);
-        return callback(new Error(`Origin ${origin} is not allowed by CORS.`));
-      },
-      credentials: false,
+    cors((req, callback) => {
+      const origin = req.header('Origin');
+      const host = req.get('host');
+
+      // Swagger UI is served by this API, and browsers still send an Origin
+      // header for same-origin POSTs ("Try it out"). Allow those even though
+      // the API's own host is not part of CLIENT_ORIGIN.
+      let sameOrigin = false;
+      if (origin && host) {
+        try {
+          sameOrigin = new URL(origin).host === host;
+        } catch {
+          sameOrigin = false;
+        }
+      }
+
+      if (!origin || sameOrigin || env.allowedOrigins.includes(origin)) {
+        return callback(null, { origin: true, credentials: false });
+      }
+      return callback(new Error(`Origin ${origin} is not allowed by CORS.`));
     }),
   );
 
