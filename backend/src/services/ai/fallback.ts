@@ -210,6 +210,10 @@ const bookLabel = (book?: Book | null) => (book ? `"${book.title}"` : 'your acco
 export const templateDraft = (context: DraftContext): string => {
   const { ticket, book } = context;
   const firstName = context.authorName.split(' ')[0] || 'there';
+  const thread = (context.messages ?? []).filter((message) => message.role !== 'SYSTEM');
+  if (thread.some((message) => message.role === 'ADMIN')) {
+    return followUpDraft(firstName, ticket.publicId, thread.at(-1)?.role === 'AUTHOR');
+  }
   const label = bookLabel(book);
   const category = ticket.category as TicketCategory;
   const facts = book ? bookLine(book) : null;
@@ -263,5 +267,22 @@ export const templateDraft = (context: DraftContext): string => {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 };
+
+/** Continues an ongoing thread instead of restarting it with a first-reply template. */
+const followUpDraft = (firstName: string, publicId: string, authorSpokeLast: boolean): string =>
+  [
+    `Hi ${firstName},`,
+    '',
+    authorSpokeLast
+      ? 'Thank you for the update. I have added your latest message to this ticket and shared it with the team working on it.'
+      : `I wanted to follow up on ticket ${publicId} and keep you posted.`,
+    '',
+    authorSpokeLast
+      ? 'We will review it against what we have already discussed here and reply on this thread within 48 hours with the next step.'
+      : 'The team is still working on this. We will update this thread within 48 hours, or sooner if we need anything from you.',
+    '',
+    'Warmly,',
+    'BookLeaf Author Support',
+  ].join('\n');
 
 export const categoryLabel = (category: string) => CATEGORY_LABELS[category as TicketCategory] ?? category;

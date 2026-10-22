@@ -17,6 +17,7 @@ process.env.AI_MAX_RETRIES = '0';
 const { heuristicClassify, heuristicPriority, templateDraft } = await import('../src/services/ai/fallback');
 const { classifyTicket } = await import('../src/services/ai/classifier');
 const { generateDraft } = await import('../src/services/ai/drafter');
+const { buildDraftMessages } = await import('../src/services/ai/prompts');
 const { prisma } = await import('../src/lib/prisma');
 prisma.aiUsage.create = async () => ({}) as never;
 
@@ -171,6 +172,38 @@ test('metadata fallback gives the actual update timeline instead of an ISBN esca
   assert.match(body, /3–5 business days/);
   assert.match(body, /exact replacement text/);
   assert.doesNotMatch(body, /48 hours|high-priority|in-house printing/);
+});
+
+test('draft prompt treats an ongoing thread as a follow-up to the latest author message', () => {
+  const fixture = ticketFixture('Royalty pending');
+  const [, user] = buildDraftMessages({
+    ...fixture,
+    authorName: 'Priya Sharma',
+    messages: [
+      { role: 'ADMIN', body: 'Finance is checking the Q3 settlement.', createdAt: new Date() },
+      { role: 'AUTHOR', body: 'Any update? It has been a week.', createdAt: new Date() },
+    ],
+    sections: [],
+    tone: 'EMPATHETIC',
+    includeHistory: true,
+  });
+  assert.match(user.content, /\[BOOKLEAF SUPPORT\] Finance is checking/);
+  assert.match(user.content, /\[AUTHOR\] Any update\?/);
+  assert.match(user.content, /FOLLOW-UP/);
+});
+
+test('template draft continues an existing conversation instead of restarting it', () => {
+  const fixture = ticketFixture('Royalty pending');
+  const body = templateDraft({
+    ...fixture,
+    authorName: 'Priya Sharma',
+    messages: [
+      { role: 'ADMIN', body: 'Finance is checking the settlement.' },
+      { role: 'AUTHOR', body: 'Any update?' },
+    ],
+  });
+  assert.match(body, /Thank you for the update/);
+  assert.doesNotMatch(body, /80% of net profit|Thank you for reaching out/);
 });
 
 function ticketFixture(subject: string) {

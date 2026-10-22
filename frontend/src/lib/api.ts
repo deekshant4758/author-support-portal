@@ -163,6 +163,7 @@ export const api = {
         body: JSON.stringify({ body, isInternal }),
       }).then((r) => r.data),
     close: (id: string) => request<Ticket>(`/tickets/${id}/close`, { method: 'POST' }).then((r) => r.data),
+    reopen: (id: string) => request<Ticket>(`/tickets/${id}/reopen`, { method: 'POST' }).then((r) => r.data),
     draft: (id: string, payload: { tone: Tone; includeHistory?: boolean; instructions?: string }) =>
       request<{ draft: string; meta: DraftMeta }>(`/tickets/${id}/ai/draft`, {
         method: 'POST',

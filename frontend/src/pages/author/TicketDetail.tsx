@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { api, ApiError } from '../../lib/api';
-import { useLiveStatus } from '../../store/live';
+
 import { useToast } from '../../store/toast';
 import { Avatar, Card, ErrorState, Modal, Spinner, StatusPill } from '../../components/ui';
 import { Icon } from '../../components/Icon';
@@ -17,25 +17,24 @@ export const TicketDetailPage = () => {
 const TicketThread = ({ id }: { id: string }) => {
   const queryClient = useQueryClient();
   const { push } = useToast();
-  const live = useLiveStatus();
+
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const [confirmClose, setConfirmClose] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
-  const previousCount = useRef(0);
+  const [reopening, setReopening] = useState(false);
+  const chatBox = useRef<HTMLDivElement>(null);
   const {
     data: ticket,
     isLoading,
     isError,
     refetch,
   } = useQuery({ queryKey: ['ticket', id], queryFn: () => api.tickets.get(id), enabled: Boolean(id) });
+  // Keep the newest message in view inside the chat box without scrolling the page.
   useEffect(() => {
-    const count = ticket?.messages.length ?? 0;
-    if (previousCount.current > 0 && count > previousCount.current)
-      endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-    previousCount.current = count;
+    const box = chatBox.current;
+    if (box) box.scrollTop = box.scrollHeight;
   }, [ticket?.messages.length]);
   const refresh = async () => {
     await Promise.all(
@@ -73,6 +72,19 @@ const TicketThread = ({ id }: { id: string }) => {
       setClosing(false);
     }
   };
+  const reopen = async () => {
+    if (reopening) return;
+    setReopening(true);
+    try {
+      await api.tickets.reopen(id);
+      await refresh();
+      push('Ticket reopened.', 'success');
+    } catch (caught) {
+      push(caught instanceof ApiError ? caught.message : 'Could not reopen the ticket.', 'error');
+    } finally {
+      setReopening(false);
+    }
+  };
   if (isLoading) return <div className="skeleton h-96 rounded-xl" />;
   if (isError || !ticket)
     return <ErrorState onRetry={() => void refetch()} message="We could not open this ticket." />;
@@ -85,11 +97,8 @@ const TicketThread = ({ id }: { id: string }) => {
       <Link to="/app/tickets" className="link inline-flex items-center gap-1 text-body-sm">
         <Icon name="arrow_back" className="text-[16px]" /> My tickets
       </Link>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-4">
         <StatusPill status={ticket.status} />
-        <span className="text-body-sm text-[#64748b]">
-          {live === 'live' ? 'Live thread' : live === 'connecting' ? 'Connecting…' : 'Reconnecting…'}
-        </span>
       </div>
       <h1 className="mt-3 text-[1.8rem] font-bold tracking-tight text-ink">{ticket.subject}</h1>
       <p className="mt-1 text-body-sm text-[#64748b]">
@@ -97,63 +106,53 @@ const TicketThread = ({ id }: { id: string }) => {
         {ticket.book ? ` · ${ticket.book.title}` : ' · General / Account Level'}
       </p>
       <Card className="mt-5 overflow-hidden">
-        <div className="border-b border-[#E2E8F0] p-5">
-          <h2 className="text-label-md font-semibold text-ink">Original query</h2>
-          <p className="mt-2 whitespace-pre-wrap text-body-sm leading-relaxed text-[#475569]">
-            {ticket.description}
-          </p>
-          {ticket.attachmentName ? (
-            <p className="mt-3 break-all text-body-sm text-[#64748b]">
-              Attachment reference: {ticket.attachmentName}
-            </p>
-          ) : null}
+        <div className="flex items-center justify-between border-b border-[#E2E8F0] px-5 py-3">
+          <h2 className="text-label-md font-semibold text-ink">Conversation</h2>
+          <div className="flex items-center gap-3 text-[11px] text-[#64748b]">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-primary" /> You
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full border border-[#CBD5E1] bg-white" /> BookLeaf Support
+            </span>
+          </div>
         </div>
-        <div className="space-y-5 bg-[#F8FAFC] p-5">
-          {messages.length === 0 ? (
-            <p className="text-body-sm text-[#64748b]">No replies yet.</p>
-          ) : (
-            messages.map((message) => (
-              <div
+        <div
+          ref={chatBox}
+          className="h-[460px] space-y-4 overflow-y-auto bg-[#F1F5F9] px-4 py-5 sm:px-5"
+          aria-label="Conversation history"
+        >
+          <AuthorBubble mine name="You" label="Original query" time={ticket.createdAt} body={ticket.description} />
+          {messages.map((message) =>
+            message.role === 'SYSTEM' ? (
+              <p key={message.id} className="text-center text-[11px] text-[#64748b]">
+                {message.body} · {formatDateTime(message.createdAt)}
+              </p>
+            ) : (
+              <AuthorBubble
                 key={message.id}
-                className={clsx('flex gap-3', message.role === 'AUTHOR' && 'flex-row-reverse')}
-              >
-                {message.role !== 'SYSTEM' ? (
-                  <Avatar
-                    name={message.authorName}
-                    size="sm"
-                    tone={message.role === 'AUTHOR' ? 'primary' : 'neutral'}
-                  />
-                ) : null}
-                <div
-                  className={clsx(
-                    'min-w-0 max-w-[90%] rounded-lg border p-3.5',
-                    message.role === 'AUTHOR' ? 'border-[#A7F3D0] bg-[#F0FDF7]' : 'border-[#E2E8F0] bg-white',
-                  )}
-                >
-                  <p className="text-[11px] text-[#64748b]">
-                    {message.role === 'AUTHOR'
-                      ? 'You'
-                      : message.role === 'SYSTEM'
-                        ? 'BookLeaf Support'
-                        : message.authorName}{' '}
-                    · {formatDateTime(message.createdAt)}
-                  </p>
-                  <p className="mt-2 whitespace-pre-wrap break-words text-body-sm leading-relaxed text-ink">
-                    {message.body}
-                  </p>
-                </div>
-              </div>
-            ))
+                mine={message.role === 'AUTHOR'}
+                name={message.role === 'AUTHOR' ? 'You' : message.authorName}
+                label={message.role === 'AUTHOR' ? '' : 'BookLeaf Support'}
+                time={message.createdAt}
+                body={message.body}
+              />
+            ),
           )}
-          <div ref={endRef} />
         </div>
         <div className="border-t border-[#E2E8F0] p-5">
           {closed ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-body-sm text-[#64748b]">This ticket is closed.</p>
-              <Link to="/app/tickets/new" className="btn-primary">
-                Raise a new query
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className="btn-secondary" disabled={reopening} onClick={() => void reopen()}>
+                  {reopening ? <Spinner className="h-4 w-4" /> : null}
+                  Reopen ticket
+                </button>
+                <Link to="/app/tickets/new" className="btn-primary">
+                  Raise a new query
+                </Link>
+              </div>
             </div>
           ) : (
             <>
@@ -171,7 +170,7 @@ const TicketThread = ({ id }: { id: string }) => {
                 maxLength={5000}
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
-                className="input resize-y"
+                className="input max-h-64 resize-y"
                 placeholder="Write your reply…"
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
@@ -219,3 +218,35 @@ const TicketThread = ({ id }: { id: string }) => {
     </div>
   );
 };
+
+const AuthorBubble = ({
+  mine,
+  name,
+  label,
+  time,
+  body,
+}: {
+  mine: boolean;
+  name: string;
+  label: string;
+  time: string;
+  body: string;
+}) => (
+  <div className={clsx('flex items-end gap-2.5', mine && 'flex-row-reverse')}>
+    <Avatar name={name} size="sm" tone={mine ? 'primary' : 'neutral'} />
+    <div className={clsx('flex min-w-0 max-w-[78%] flex-col', mine ? 'items-end' : 'items-start')}>
+      <p className="mb-1 px-1 text-[11px] text-[#64748b]">
+        <span className="font-semibold text-[#334155]">{name}</span>
+        {label ? ` · ${label}` : ''} · {formatDateTime(time)}
+      </p>
+      <div
+        className={clsx(
+          'rounded-2xl px-4 py-3 shadow-card',
+          mine ? 'rounded-tr-sm bg-primary text-white' : 'rounded-tl-sm border border-[#E2E8F0] bg-white text-ink',
+        )}
+      >
+        <p className="whitespace-pre-wrap break-words text-body-sm leading-relaxed">{body}</p>
+      </div>
+    </div>
+  </div>
+);

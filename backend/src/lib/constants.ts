@@ -1,5 +1,6 @@
-/** Shared domain constants. SQLite has no native enums, so these are the single
- * source of truth used by validation, services and the OpenAPI spec. */
+/** Shared domain constants. Statuses, categories and priorities are stored as
+ * strings, so these are the single source of truth used by validation, services
+ * and the OpenAPI spec. */
 
 export const TICKET_CATEGORIES = [
   'ROYALTY_PAYMENTS',

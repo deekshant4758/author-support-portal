@@ -76,7 +76,6 @@ ticketsRouter.post(
         description: input.description,
         book,
         authorTier: author.tier,
-        hasAttachment: Boolean(input.attachmentName),
       },
       undefined,
     );
@@ -534,6 +533,54 @@ ticketsRouter.post(
   }),
 );
 
+/** Reopen a closed or resolved ticket. Admins, or the author who owns it. */
+ticketsRouter.post(
+  '/:id/reopen',
+  validate(idParamSchema, 'params'),
+  asyncHandler(async (req, res) => {
+    const ticket = await prisma.ticket.findFirst({
+      where: { OR: [{ id: req.params.id }, { publicId: req.params.id }] },
+    });
+    if (!ticket) throw notFound('That support ticket does not exist.');
+
+    if (req.user!.role !== 'ADMIN' && ticket.authorId !== req.user!.authorId) {
+      throw forbidden('You can only reopen your own support tickets.');
+    }
+    if (ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED') {
+      throw conflict('Only closed or resolved tickets can be reopened.');
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: {
+        status: 'OPEN',
+        closedAt: null,
+        resolvedAt: null,
+        events: {
+          create: {
+            actorId: req.user!.id,
+            actorName: req.user!.name,
+            type: 'REOPENED',
+            description: `Ticket reopened by ${req.user!.role === 'ADMIN' ? 'operations' : 'the author'}.`,
+            metadata: JSON.stringify({ from: ticket.status, to: 'OPEN' }),
+          },
+        },
+      },
+      include: ticketInclude,
+    });
+
+    const payload = serializeTicket(updated);
+    publishTicketEvent({
+      type: 'ticket.updated',
+      ticketId: updated.id,
+      ticketPublicId: updated.publicId,
+      authorId: updated.authorId,
+      data: payload,
+    });
+    res.json({ data: payload });
+  }),
+);
+
 /** Admin-only: generate a grounded, editable draft. Never sends anything. */
 ticketsRouter.post(
   '/:id/ai/draft',
@@ -552,13 +599,19 @@ ticketsRouter.post(
         messages: {
           where: { isInternal: false, role: { in: ['AUTHOR', 'ADMIN'] } },
           orderBy: { createdAt: 'desc' },
-          take: 2,
+          take: 30,
         },
       },
     });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
-    const messages = [...ticket.messages].reverse();
+    // Oldest first, skipping the opening message that duplicates the ticket description.
+    const messages = [...ticket.messages]
+      .reverse()
+      .filter(
+        (message, index) =>
+          !(index === 0 && message.role === 'AUTHOR' && message.body === ticket.description),
+      );
 
     const draft = await generateDraft(
       {
@@ -631,7 +684,6 @@ ticketsRouter.post(
         description: ticket.description,
         book: ticket.book,
         authorTier: ticket.author.tier,
-        hasAttachment: Boolean(ticket.attachmentName),
       },
       ticket.id,
     );

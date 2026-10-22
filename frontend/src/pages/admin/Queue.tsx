@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { api } from '../../lib/api';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, ApiError } from '../../lib/api';
+import { useToast } from '../../store/toast';
 import {
   Card,
   EmptyState,
@@ -9,18 +10,33 @@ import {
   MetricCard,
   Pagination,
   PriorityPill,
+  Spinner,
   StatusPill,
+  Tabs,
 } from '../../components/ui';
 import { CATEGORY_LABELS, PRIORITY_LABELS, timeAgo } from '../../lib/format';
 import type { TicketFilters } from '../../lib/types';
 
+type QueueTab = 'active' | 'closed';
+
+const TAB_STATUSES: Record<QueueTab, string> = {
+  active: 'OPEN,IN_PROGRESS',
+  closed: 'RESOLVED,CLOSED',
+};
+
+const defaultFilters = (tab: QueueTab): TicketFilters => ({
+  status: TAB_STATUSES[tab],
+  sort: 'newest',
+  page: 1,
+  pageSize: 20,
+});
+
 export const AdminQueuePage = () => {
-  const [filters, setFilters] = useState<TicketFilters>({
-    status: 'OPEN,IN_PROGRESS',
-    sort: 'urgency',
-    page: 1,
-    pageSize: 20,
-  });
+  const queryClient = useQueryClient();
+  const { push } = useToast();
+  const [tab, setTab] = useState<QueueTab>('active');
+  const [filters, setFilters] = useState<TicketFilters>(defaultFilters('active'));
+  const [reopening, setReopening] = useState<string | null>(null);
   const stats = useQuery({ queryKey: ['admin-stats'], queryFn: api.admin.stats });
   const query = useQuery({
     queryKey: ['tickets', 'admin', filters],
@@ -29,7 +45,29 @@ export const AdminQueuePage = () => {
   });
   const change = (value: Partial<TicketFilters>) =>
     setFilters((current) => ({ ...current, ...value, page: 1 }));
+  const switchTab = (next: QueueTab) => {
+    setTab(next);
+    setFilters(defaultFilters(next));
+  };
+  const reopen = async (id: string) => {
+    if (reopening) return;
+    setReopening(id);
+    try {
+      await api.tickets.reopen(id);
+      await Promise.all(
+        [['tickets'], ['ticket', id], ['admin-stats']].map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      );
+      push('Ticket reopened.', 'success');
+    } catch (caught) {
+      push(caught instanceof ApiError ? caught.message : 'The ticket could not be reopened.', 'error');
+    } finally {
+      setReopening(null);
+    }
+  };
   const totals = stats.data?.totals;
+  const statuses = stats.data?.statuses;
   return (
     <div className="animate-fade-up">
       <h1 className="text-[2rem] font-bold tracking-tight text-ink">Ticket queue</h1>
@@ -41,7 +79,24 @@ export const AdminQueuePage = () => {
         <MetricCard label="Unassigned" value={totals?.unassignedOpen ?? '—'} icon="person_add" />
         <MetricCard label="Overdue" value={totals?.overdueCount ?? '—'} icon="schedule" />
       </div>
-      <Card className="mt-5 p-4">
+      <Tabs
+        className="mt-5 w-fit"
+        value={tab}
+        onChange={switchTab}
+        options={[
+          {
+            value: 'active',
+            label: 'Active',
+            count: statuses ? statuses.OPEN + statuses.IN_PROGRESS : undefined,
+          },
+          {
+            value: 'closed',
+            label: 'Closed & resolved',
+            count: statuses ? statuses.RESOLVED + statuses.CLOSED : undefined,
+          },
+        ]}
+      />
+      <Card className="mt-3 p-4">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <label className="block sm:col-span-2">
             <span className="field-label">Search</span>
@@ -62,12 +117,19 @@ export const AdminQueuePage = () => {
               onChange={(event) => change({ status: event.target.value || undefined })}
               className="input"
             >
-              <option value="OPEN,IN_PROGRESS">Unresolved</option>
-              <option value="">All</option>
-              <option value="OPEN">Open</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
+              {tab === 'active' ? (
+                <>
+                  <option value="OPEN,IN_PROGRESS">All active</option>
+                  <option value="OPEN">Open</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                </>
+              ) : (
+                <>
+                  <option value="RESOLVED,CLOSED">All closed &amp; resolved</option>
+                  <option value="RESOLVED">Resolved</option>
+                  <option value="CLOSED">Closed</option>
+                </>
+              )}
             </select>
           </label>
           <label className="block">
@@ -134,17 +196,17 @@ export const AdminQueuePage = () => {
               onChange={(event) => change({ sort: event.target.value as TicketFilters['sort'] })}
               className="input"
             >
-              <option value="urgency">Priority, then oldest</option>
-              <option value="oldest">Oldest first</option>
               <option value="newest">Newest first</option>
               <option value="updated">Recently updated</option>
+              <option value="urgency">Priority, then oldest</option>
+              <option value="oldest">Oldest first</option>
             </select>
           </label>
         </div>
         <button
           type="button"
           className="link mt-3 text-body-sm"
-          onClick={() => setFilters({ status: 'OPEN,IN_PROGRESS', sort: 'urgency', page: 1, pageSize: 20 })}
+          onClick={() => setFilters(defaultFilters(tab))}
         >
           Reset filters
         </button>
@@ -155,14 +217,18 @@ export const AdminQueuePage = () => {
         ) : query.isError ? (
           <ErrorState onRetry={() => void query.refetch()} message="We could not load the ticket queue." />
         ) : query.data?.items.length === 0 ? (
-          <EmptyState icon="inbox" title="No tickets found" message="Try changing your filters." />
+          <EmptyState
+            icon="inbox"
+            title={tab === 'closed' ? 'No closed tickets' : 'No tickets found'}
+            message="Try changing your filters."
+          />
         ) : (
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-body-sm">
                 <thead className="border-b border-[#E2E8F0] bg-[#F8FAFC] text-[11px] uppercase tracking-wide text-[#64748b]">
                   <tr>
-                    {['Ticket', 'Author', 'Priority', 'Status', 'Created'].map((label) => (
+                    {['Ticket', 'Author', 'Priority', 'Status', 'Created', ...(tab === 'closed' ? [''] : [])].map((label) => (
                       <th key={label} className="px-4 py-3 font-semibold">
                         {label}
                       </th>
@@ -201,6 +267,19 @@ export const AdminQueuePage = () => {
                       <td className="whitespace-nowrap px-4 py-4 text-[#64748b]">
                         {timeAgo(ticket.createdAt)}
                       </td>
+                      {tab === 'closed' ? (
+                        <td className="px-4 py-4 text-right">
+                          <button
+                            type="button"
+                            className="btn-secondary whitespace-nowrap"
+                            disabled={reopening !== null}
+                            onClick={() => void reopen(ticket.id)}
+                          >
+                            {reopening === ticket.id ? <Spinner className="h-4 w-4" /> : null}
+                            Reopen
+                          </button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>

@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { Icon } from './Icon';
 import { Avatar } from './ui';
 import { useAuth } from '../store/auth';
-import { useLiveStatus } from '../store/live';
+
 import { api } from '../lib/api';
 import { number } from '../lib/format';
 import type { Role } from '../lib/types';
@@ -35,27 +35,10 @@ const Logo = () => (
   </span>
 );
 
-const LiveChip = ({ status }: { status: 'connecting' | 'live' | 'offline' }) => {
-  const config = {
-    live: { label: 'Live sync', dot: 'bg-[#059669]', className: 'text-[#047857]' },
-    connecting: { label: 'Connecting', dot: 'bg-[#F59E0B]', className: 'text-[#B45309]' },
-    offline: { label: 'Reconnecting', dot: 'bg-[#94A3B8]', className: 'text-[#475569]' },
-  }[status];
-
-  return (
-    <span
-      className={clsx('hidden items-center gap-1.5 text-label-sm sm:inline-flex', config.className)}
-      title={status === 'live' ? 'Real-time updates connected' : 'Real-time updates are reconnecting'}
-    >
-      <span className={clsx('h-1.5 w-1.5 rounded-full', config.dot, status === 'live' && 'animate-pulse')} />
-      {config.label}
-    </span>
-  );
-};
 
 export const AppShell = ({ role, children }: { role: Role; children: ReactNode }) => {
   const { user, logout } = useAuth();
-  const status = useLiveStatus();
+
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -203,8 +186,6 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
           ) : null}
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
-            <LiveChip status={status} />
-            <span className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
 
             <div className="relative">
               <button

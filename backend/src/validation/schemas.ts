@@ -69,7 +69,7 @@ export const ticketQuerySchema = z.object({
   dateFrom: z.string().optional(),
   dateTo: z.string().optional(),
   search: z.string().trim().max(120).optional(),
-  sort: z.enum(['urgency', 'oldest', 'newest', 'updated']).optional().default('urgency'),
+  sort: z.enum(['urgency', 'oldest', 'newest', 'updated']).optional().default('newest'),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(50),
 });

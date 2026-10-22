@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
@@ -10,7 +10,6 @@ export const NewTicketPage = () => {
   const navigate = useNavigate();
   const { push } = useToast();
   const [params] = useSearchParams();
-  const fileInput = useRef<HTMLInputElement>(null);
   const {
     data: books,
     isLoading,
@@ -20,7 +19,6 @@ export const NewTicketPage = () => {
   const [bookId, setBookId] = useState(params.get('bookId') ?? '');
   const [subject, setSubject] = useState(params.get('subject') ?? '');
   const [description, setDescription] = useState('');
-  const [attachment, setAttachment] = useState<{ name: string; size: string } | null>(null);
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,16 +26,6 @@ export const NewTicketPage = () => {
   const descriptionError =
     description.trim().length < 20 ? 'Describe the issue in at least 20 characters.' : null;
 
-  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      push('Choose a file smaller than 10 MB.', 'error');
-      event.target.value = '';
-      return;
-    }
-    setAttachment({ name: file.name, size: `${Math.max(1, Math.round(file.size / 1024))} KB` });
-  };
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     setTouched(true);
@@ -49,8 +37,6 @@ export const NewTicketPage = () => {
         bookId: bookId || null,
         subject: subject.trim(),
         description: description.trim(),
-        attachmentName: attachment?.name ?? null,
-        attachmentSize: attachment?.size ?? null,
       });
       push(`Ticket ${response.data.ticketNumber} submitted.`, 'success');
       navigate(`/app/tickets/${response.data.id}`);
@@ -134,38 +120,6 @@ export const NewTicketPage = () => {
               <p id="description-error" className="mt-1 text-body-sm text-danger">
                 {descriptionError}
               </p>
-            ) : null}
-          </div>
-          <div>
-            <label htmlFor="query-attachment" className="field-label">
-              Attachment (optional)
-            </label>
-            <input
-              id="query-attachment"
-              ref={fileInput}
-              type="file"
-              onChange={onFile}
-              className="block w-full text-body-sm text-[#64748b]"
-            />
-            <p className="mt-2 text-body-sm text-[#64748b]">
-              Attachment preview only: the filename is saved, but the file is not uploaded.
-            </p>
-            {attachment ? (
-              <div className="mt-2 flex items-center gap-2 text-body-sm">
-                <span className="min-w-0 break-all">
-                  {attachment.name} · {attachment.size}
-                </span>
-                <button
-                  type="button"
-                  className="link shrink-0"
-                  onClick={() => {
-                    setAttachment(null);
-                    if (fileInput.current) fileInput.current.value = '';
-                  }}
-                >
-                  Remove
-                </button>
-              </div>
             ) : null}
           </div>
           {error ? (

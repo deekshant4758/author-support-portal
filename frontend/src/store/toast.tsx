@@ -42,7 +42,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      <div className="pointer-events-none fixed bottom-5 right-5 z-[100] flex w-full max-w-sm flex-col gap-2">
+      <div className="pointer-events-none fixed right-5 top-20 z-[100] flex w-full max-w-sm flex-col gap-2">
         {toasts.map((toast) => {
           const style = TONE_STYLES[toast.tone];
           return (

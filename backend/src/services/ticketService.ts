@@ -33,7 +33,7 @@ export const ticketDetailInclude = (isAdmin: boolean) =>
       orderBy: { createdAt: 'asc' },
     },
     events: {
-      where: isAdmin ? {} : { type: { in: ['CREATED', 'STATUS_CHANGED', 'PUBLIC_REPLY', 'CLOSED'] } },
+      where: isAdmin ? {} : { type: { in: ['CREATED', 'STATUS_CHANGED', 'PUBLIC_REPLY', 'CLOSED', 'REOPENED'] } },
       orderBy: { createdAt: 'asc' },
     },
     _count: { select: { messages: { where: { isInternal: false } } } },
@@ -152,12 +152,14 @@ export const listTickets = async (req: Request, query: TicketQueryInput) => {
       : query.sort === 'updated'
         ? { lastMessageAt: 'desc' }
         : { createdAt: 'desc' };
+  // Tie-break on id so pagination is stable when tickets share a timestamp.
+  const orderByWithTieBreak: Prisma.TicketOrderByWithRelationInput[] = [orderBy, { id: 'desc' }];
 
   const [items, total] = await Promise.all([
     prisma.ticket.findMany({
       where,
       include: ticketInclude,
-      orderBy,
+      orderBy: orderByWithTieBreak,
       skip: (query.page - 1) * query.pageSize,
       take: query.pageSize,
     }),

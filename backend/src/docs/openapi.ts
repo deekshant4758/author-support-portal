@@ -305,7 +305,7 @@ export const openApiSpec = {
         summary: 'List tickets',
         description:
           'Authors automatically see only their own tickets. Admin filters accept comma-separated values ' +
-          '(e.g. `status=OPEN,IN_PROGRESS`). Default admin sort is `urgency` (priority, then oldest/SLA).',
+          '(e.g. `status=OPEN,IN_PROGRESS`). Default sort is `newest` (latest created first).',
         parameters: [
           { name: 'status', in: 'query', schema: { type: 'string' }, example: 'OPEN,IN_PROGRESS' },
           { name: 'category', in: 'query', schema: { type: 'string' } },
@@ -417,6 +417,19 @@ export const openApiSpec = {
         tags: ['Tickets'],
         summary: 'Close a ticket',
         description: 'Available to the owning author or an admin.',
+        parameters: [ticketIdParam],
+        responses: {
+          200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
+          403: errorResponse,
+          409: errorResponse,
+        },
+      },
+    },
+    '/tickets/{id}/reopen': {
+      post: {
+        tags: ['Tickets'],
+        summary: 'Reopen a closed or resolved ticket',
+        description: 'Available to the owning author or an admin. The ticket returns to OPEN.',
         parameters: [ticketIdParam],
         responses: {
           200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
