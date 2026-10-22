@@ -5,7 +5,7 @@ import clsx from 'clsx';
 import { api, ApiError } from '../../lib/api';
 import { useAuth } from '../../store/auth';
 import { useToast } from '../../store/toast';
-import { Avatar, Card, ErrorState, Modal, PriorityPill, Spinner, StatusPill } from '../../components/ui';
+import { Avatar, Card, ErrorState, Modal, PageLoader, PriorityPill, Spinner, StatusPill } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { CATEGORY_LABELS, PRIORITY_LABELS, formatDateTime, money } from '../../lib/format';
 import type { TicketCategory, TicketPriority, TicketStatus, Tone } from '../../lib/types';
@@ -133,7 +133,8 @@ const TicketWorkspace = ({ id }: { id: string }) => {
     const box = chatBox.current;
     if (box) box.scrollTop = box.scrollHeight;
   }, [messageCount]);
-  if (ticketQuery.isLoading) return <div className="skeleton h-96 rounded-xl" />;
+  if (ticketQuery.isLoading)
+    return <PageLoader label="Opening the ticket workspace…" hint="Loading the conversation and triage details." />;
   if (ticketQuery.isError || !ticket)
     return <ErrorState onRetry={() => void ticketQuery.refetch()} message="We could not open this ticket." />;
   const messages = ticket.messages.filter(

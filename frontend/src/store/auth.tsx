@@ -10,6 +10,7 @@ import {
 import { Navigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, tokenStore } from '../lib/api';
+import { PageLoader } from '../components/ui';
 import type { Role, User } from '../lib/types';
 
 interface AuthContextValue {
@@ -92,12 +93,7 @@ export const RequireRole = ({ role, children }: { role: Role; children: ReactNod
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
-        <div className="flex flex-col items-center gap-3">
-          <span className="material-symbols-outlined animate-spin text-[32px] text-primary">
-            progress_activity
-          </span>
-          <p className="text-label-md text-muted">Restoring your session…</p>
-        </div>
+        <PageLoader label="Restoring your session…" />
       </div>
     );
   }

@@ -77,11 +77,22 @@ export default {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.45' },
         },
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        'loading-bar': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(250%)' },
+        },
       },
       animation: {
         'fade-up': 'fade-up 0.28s ease-out both',
         'slide-in': 'slide-in 0.25s ease-out both',
         'pulse-soft': 'pulseSoft 2.2s ease-in-out infinite',
+        // Delayed so fast/cached requests never flash the overlay.
+        'fade-in': 'fade-in 0.2s ease-out 0.18s both',
+        'loading-bar': 'loading-bar 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite',
       },
     },
   },

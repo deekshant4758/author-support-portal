@@ -5,7 +5,7 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../store/auth';
 import { BookCover } from '../../components/BookCover';
 import { ProductionStepper } from '../../components/ProductionStepper';
-import { Card, EmptyState, ErrorState } from '../../components/ui';
+import { Card, EmptyState, ErrorState, PageLoader } from '../../components/ui';
 import { formatDate, money, number } from '../../lib/format';
 
 export const BooksPage = () => {
@@ -52,7 +52,7 @@ export const BooksPage = () => {
       </div>
       <div className="mt-5 space-y-5">
         {query.isLoading ? (
-          <div className="skeleton h-64 rounded-xl" />
+          <PageLoader label="Loading your books…" hint="Fetching your catalogue and royalty figures." />
         ) : query.isError ? (
           <ErrorState onRetry={() => void query.refetch()} message="We could not load your books." />
         ) : books.length === 0 ? (

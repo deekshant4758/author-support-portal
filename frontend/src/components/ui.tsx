@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useIsFetching, useIsMutating } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { Icon } from './Icon';
 import {
@@ -308,12 +309,69 @@ export const Spinner = ({ className }: { className?: string }) => (
   />
 );
 
-export const PageLoader = ({ label = 'Loading workspace…' }: { label?: string }) => (
-  <div className="flex min-h-[45vh] flex-col items-center justify-center gap-3" role="status">
-    <Spinner className="h-7 w-7" />
-    <p className="text-body-sm text-[#64748b]">{label}</p>
+export const PageLoader = ({ label = 'Loading workspace…', hint }: { label?: string; hint?: string }) => (
+  <div
+    className="flex min-h-[45vh] flex-col items-center justify-center gap-4 py-10"
+    role="status"
+    aria-live="polite"
+  >
+    <span className="relative flex h-14 w-14 items-center justify-center" aria-hidden>
+      <span className="absolute inset-0 rounded-full border-2 border-[#E5EEFF]" />
+      <span className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-r-primary/30 border-t-primary" />
+      <Icon name="menu_book" className="text-[22px] text-primary" />
+    </span>
+    <span className="text-center">
+      <span className="block text-label-md font-semibold text-ink">{label}</span>
+      {hint ? <span className="mt-1 block text-body-sm text-[#64748b]">{hint}</span> : null}
+    </span>
   </div>
 );
+
+/** Compact spinner + text for small regions (card bodies, inline answers). */
+export const InlineLoader = ({ label = 'Loading…', className }: { label?: string; className?: string }) => (
+  <span
+    className={clsx('inline-flex items-center gap-2 text-body-sm text-[#64748b]', className)}
+    role="status"
+    aria-live="polite"
+  >
+    <Spinner className="h-4 w-4" />
+    {label}
+  </span>
+);
+
+/**
+ * Covers a results region while a query refetches with `keepPreviousData`.
+ * The previous rows stay visible underneath, so filters never blank the page.
+ */
+export const LoadingOverlay = ({ show, label = 'Updating results…' }: { show: boolean; label?: string }) =>
+  show ? (
+    <div
+      className="pointer-events-none absolute inset-0 z-20 flex animate-fade-in items-start justify-center rounded-xl bg-white/60 pt-6 backdrop-blur-[1px] sm:pt-10"
+      role="status"
+      aria-live="polite"
+    >
+      <span className="flex items-center gap-2.5 rounded-full border border-[#E2E8F0] bg-white px-4 py-2 shadow-lift">
+        <Spinner className="h-4 w-4" />
+        <span className="text-label-md font-semibold text-ink">{label}</span>
+      </span>
+    </div>
+  ) : null;
+
+/** Thin, app-wide progress bar whenever any query or mutation is in flight. */
+export const TopProgressBar = () => {
+  const fetching = useIsFetching();
+  const mutating = useIsMutating();
+  if (fetching + mutating === 0) return null;
+  return (
+    <div
+      className="pointer-events-none fixed inset-x-0 top-0 z-[100] h-[3px] overflow-hidden bg-primary/10"
+      role="progressbar"
+      aria-label="Loading"
+    >
+      <div className="h-full w-2/5 animate-loading-bar rounded-full bg-primary" />
+    </div>
+  );
+};
 
 export const ErrorState = ({
   title = 'We could not load this right now',

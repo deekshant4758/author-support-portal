@@ -53,6 +53,18 @@
     line-height: 1;
     user-select: none;
   }
+
+  /* Keep spinners moving, but stop decorative motion for reduced-motion users. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-up,
+    .animate-fade-in,
+    .animate-slide-in,
+    .animate-loading-bar,
+    .animate-pulse-soft,
+    .skeleton {
+      animation: none !important;
+    }
+  }
 }
 
 @layer components {

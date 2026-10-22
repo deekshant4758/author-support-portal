@@ -7,7 +7,9 @@ import {
   Card,
   EmptyState,
   ErrorState,
+  LoadingOverlay,
   MetricCard,
+  PageLoader,
   Pagination,
   PriorityPill,
   Spinner,
@@ -75,9 +77,21 @@ export const AdminQueuePage = () => {
         Manage author queries and follow up on unresolved tickets.
       </p>
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <MetricCard label="Unresolved" value={totals?.unresolved ?? '—'} icon="pending_actions" />
-        <MetricCard label="Unassigned" value={totals?.unassignedOpen ?? '—'} icon="person_add" />
-        <MetricCard label="Overdue" value={totals?.overdueCount ?? '—'} icon="schedule" />
+        <MetricCard
+          label="Unresolved"
+          value={totals?.unresolved ?? (stats.isLoading ? <Spinner className="h-5 w-5" /> : '—')}
+          icon="pending_actions"
+        />
+        <MetricCard
+          label="Unassigned"
+          value={totals?.unassignedOpen ?? (stats.isLoading ? <Spinner className="h-5 w-5" /> : '—')}
+          icon="person_add"
+        />
+        <MetricCard
+          label="Overdue"
+          value={totals?.overdueCount ?? (stats.isLoading ? <Spinner className="h-5 w-5" /> : '—')}
+          icon="schedule"
+        />
       </div>
       <Tabs
         className="mt-5 w-fit"
@@ -211,9 +225,9 @@ export const AdminQueuePage = () => {
           Reset filters
         </button>
       </Card>
-      <div className="mt-5" aria-busy={query.isFetching}>
+      <div className="relative mt-5" aria-busy={query.isFetching}>
         {query.isLoading ? (
-          <div className="skeleton h-64 rounded-xl" />
+          <PageLoader label="Loading the ticket queue…" hint="Fetching the latest author queries." />
         ) : query.isError ? (
           <ErrorState onRetry={() => void query.refetch()} message="We could not load the ticket queue." />
         ) : query.data?.items.length === 0 ? (
@@ -294,6 +308,7 @@ export const AdminQueuePage = () => {
             />
           </Card>
         )}
+        <LoadingOverlay show={query.isFetching && !query.isLoading} label="Applying filters…" />
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { Card, EmptyState, ErrorState, Pagination, StatusPill } from '../../components/ui';
+import { Card, EmptyState, ErrorState, LoadingOverlay, PageLoader, Pagination, StatusPill } from '../../components/ui';
 import { timeAgo } from '../../lib/format';
 
 export const TicketsPage = () => {
@@ -68,9 +68,9 @@ export const TicketsPage = () => {
           </select>
         </label>
       </div>
-      <div className="mt-5 space-y-3" aria-busy={query.isFetching}>
+      <div className="relative mt-5 space-y-3" aria-busy={query.isFetching}>
         {query.isLoading ? (
-          <div className="skeleton h-64 rounded-xl" />
+          <PageLoader label="Loading your tickets…" hint="Fetching your support conversations." />
         ) : query.isError ? (
           <ErrorState onRetry={() => void query.refetch()} message="We could not load your tickets." />
         ) : query.data?.items.length === 0 ? (
@@ -105,6 +105,10 @@ export const TicketsPage = () => {
             />
           </>
         )}
+        <LoadingOverlay
+          show={query.isFetching && !query.isLoading}
+          label="Applying filters…"
+        />
       </div>
     </div>
   );

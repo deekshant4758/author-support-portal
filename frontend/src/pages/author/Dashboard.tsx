@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api';
-import { Card, EmptyState, ErrorState, MetricCard, StatusPill } from '../../components/ui';
+import { Card, EmptyState, ErrorState, InlineLoader, MetricCard, PageLoader, StatusPill } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { ProductionStepper } from '../../components/ProductionStepper';
 import { money, number, timeAgo } from '../../lib/format';
@@ -16,7 +16,13 @@ export const DashboardPage = () => {
     queryFn: api.knowledge.answers,
     staleTime: 5 * 60_000,
   });
-  if (isLoading) return <div className="skeleton h-96 rounded-xl" />;
+  if (isLoading)
+    return (
+      <PageLoader
+        label="Loading your dashboard…"
+        hint="Fetching your books, royalties and recent tickets."
+      />
+    );
   if (isError || !data)
     return <ErrorState onRetry={() => void refetch()} message="We could not load your dashboard." />;
   const { author, metrics, recentTickets, books } = data;
@@ -106,9 +112,9 @@ export const DashboardPage = () => {
             </div>
             <div className="p-4">
               {answers.isLoading ? (
-                <p role="status" className="text-body-sm text-[#64748b]">
-                  Loading answers…
-                </p>
+                <div className="flex items-center justify-center py-6">
+                  <InlineLoader label="Loading answers…" />
+                </div>
               ) : answers.isError ? (
                 <div className="text-body-sm">
                   <p>We could not load the answers.</p>

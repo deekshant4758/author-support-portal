@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { api, ApiError } from '../../lib/api';
 import { useToast } from '../../store/toast';
-import { Card, ErrorState, Spinner } from '../../components/ui';
+import { Card, ErrorState, PageLoader, Spinner } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 
 export const NewTicketPage = () => {
@@ -48,7 +48,7 @@ export const NewTicketPage = () => {
       setSubmitting(false);
     }
   };
-  if (isLoading) return <div className="skeleton h-96 rounded-xl" />;
+  if (isLoading) return <PageLoader label="Loading your books…" hint="Preparing the query form." />;
   if (isError) return <ErrorState onRetry={() => void refetch()} message="We could not load your books." />;
   return (
     <div className="mx-auto max-w-3xl animate-fade-up">

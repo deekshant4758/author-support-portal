@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { api, ApiError } from '../../lib/api';
 import { useToast } from '../../store/toast';
-import { Avatar, Card, ErrorState, Spinner, StatusPill } from '../../components/ui';
+import { Avatar, Card, ErrorState, PageLoader, Spinner, StatusPill } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { formatDateTime } from '../../lib/format';
 
@@ -55,7 +55,8 @@ const TicketThread = ({ id }: { id: string }) => {
       setSending(false);
     }
   };
-  if (isLoading) return <div className="skeleton h-96 rounded-xl" />;
+  if (isLoading)
+    return <PageLoader label="Opening your conversation…" hint="Loading the ticket and its replies." />;
   if (isError || !ticket)
     return <ErrorState onRetry={() => void refetch()} message="We could not open this ticket." />;
   const closed = ticket.status === 'CLOSED';

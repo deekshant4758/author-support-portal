@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Route, Routes, Link } from 'react-router-dom';
 import { AppShell } from './components/AppShell';
 import { Icon } from './components/Icon';
+import { PageLoader, TopProgressBar } from './components/ui';
 import { RequireRole, homeFor, useAuth } from './store/auth';
 import { LiveProvider } from './store/live';
 import { LoginPage } from './pages/Login';
@@ -17,7 +18,7 @@ const RootRedirect = () => {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-surface">
-        <span className="h-7 w-7 animate-spin rounded-full border-2 border-[#cbd5e1] border-t-primary" />
+        <PageLoader label="Restoring your session…" />
       </div>
     );
   }
@@ -46,49 +47,52 @@ const NotFoundPage = () => {
 };
 
 export const App = () => (
-  <Routes>
-    <Route path="/" element={<RootRedirect />} />
-    <Route path="/login" element={<LoginPage />} />
+  <>
+    <TopProgressBar />
+    <Routes>
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<LoginPage />} />
 
-    <Route
-      path="/app"
-      element={
-        <RequireRole role="AUTHOR">
-          <LiveProvider>
-            <AppShell role="AUTHOR">
-              <Outlet />
-            </AppShell>
-          </LiveProvider>
-        </RequireRole>
-      }
-    >
-      <Route index element={<Navigate to="/app/dashboard" replace />} />
-      <Route path="dashboard" element={<DashboardPage />} />
-      <Route path="books" element={<BooksPage />} />
-      <Route path="tickets" element={<TicketsPage />} />
-      <Route path="tickets/new" element={<NewTicketPage />} />
-      <Route path="tickets/:id" element={<TicketDetailPage />} />
+      <Route
+        path="/app"
+        element={
+          <RequireRole role="AUTHOR">
+            <LiveProvider>
+              <AppShell role="AUTHOR">
+                <Outlet />
+              </AppShell>
+            </LiveProvider>
+          </RequireRole>
+        }
+      >
+        <Route index element={<Navigate to="/app/dashboard" replace />} />
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="books" element={<BooksPage />} />
+        <Route path="tickets" element={<TicketsPage />} />
+        <Route path="tickets/new" element={<NewTicketPage />} />
+        <Route path="tickets/:id" element={<TicketDetailPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
+      <Route
+        path="/admin"
+        element={
+          <RequireRole role="ADMIN">
+            <LiveProvider>
+              <AppShell role="ADMIN">
+                <Outlet />
+              </AppShell>
+            </LiveProvider>
+          </RequireRole>
+        }
+      >
+        <Route index element={<Navigate to="/admin/queue" replace />} />
+        <Route path="queue" element={<AdminQueuePage />} />
+        <Route path="tickets/:id" element={<AdminTicketPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+
       <Route path="*" element={<NotFoundPage />} />
-    </Route>
-
-    <Route
-      path="/admin"
-      element={
-        <RequireRole role="ADMIN">
-          <LiveProvider>
-            <AppShell role="ADMIN">
-              <Outlet />
-            </AppShell>
-          </LiveProvider>
-        </RequireRole>
-      }
-    >
-      <Route index element={<Navigate to="/admin/queue" replace />} />
-      <Route path="queue" element={<AdminQueuePage />} />
-      <Route path="tickets/:id" element={<AdminTicketPage />} />
-      <Route path="*" element={<NotFoundPage />} />
-    </Route>
-
-    <Route path="*" element={<NotFoundPage />} />
-  </Routes>
+    </Routes>
+  </>
 );
