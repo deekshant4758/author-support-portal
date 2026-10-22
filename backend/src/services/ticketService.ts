@@ -99,13 +99,14 @@ export const buildTicketWhere = (req: Request, query: TicketQueryInput): Prisma.
   }
 
   if (query.search) {
-    const search = query.search;
+    // Postgres `contains` is case-sensitive unless the mode is set explicitly.
+    const match = { contains: query.search, mode: 'insensitive' as const };
     where.OR = [
-      { subject: { contains: search } },
-      { description: { contains: search } },
-      { publicId: { contains: search } },
-      { author: { name: { contains: search } } },
-      { book: { title: { contains: search } } },
+      { subject: match },
+      { description: match },
+      { publicId: match },
+      { author: { name: match } },
+      { book: { title: match } },
     ];
   }
 
@@ -115,7 +116,7 @@ export const buildTicketWhere = (req: Request, query: TicketQueryInput): Prisma.
 export const listTickets = async (req: Request, query: TicketQueryInput) => {
   const where = buildTicketWhere(req, query);
 
-  // Urgency needs priority-aware ordering, which SQLite cannot express on a
+  // Urgency needs priority-aware ordering, which Prisma cannot express on a
   // string column. The result set for a support queue is small, so we sort in
   // memory after filtering and then paginate.
   if (query.sort === 'urgency') {

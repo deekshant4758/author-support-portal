@@ -6,7 +6,7 @@ The bundled dataset contains all **10 authors and 18 books**. Seeded conversatio
 
 ## Run locally
 
-Use Node.js 20+ and npm. Run the backend and frontend in separate terminals.
+Use Node.js 20+, npm and a PostgreSQL database (local or hosted). Run the backend and frontend in separate terminals.
 
 ```powershell
 cd backend
@@ -16,7 +16,9 @@ npm run setup
 npm run dev
 ```
 
-`setup` generates the Prisma client, creates the SQLite schema and seeds the database. **The seed deletes existing application records before inserting demo data. Run setup only for a fresh demo database.** For an existing database, use `npm run prisma:generate` and `npm run db:push` without seeding. Do not overwrite an existing `.env`.
+Before `npm run setup`, set `DATABASE_URL` in `backend/.env` to your PostgreSQL connection string, for example `postgresql://user:password@host:5432/bookleaf?schema=public` (hosted providers usually need `&sslmode=require`).
+
+`setup` generates the Prisma client, applies the migrations in `backend/prisma/migrations` and seeds the database from `backend/prisma/data/authors.json` (the supplied sample dataset). **The seed deletes existing application records before inserting demo data. Run setup only for a fresh demo database.** For an existing database, use `npm run prisma:generate` and `npm run db:migrate` without seeding. Do not overwrite an existing `.env`. After changing `schema.prisma`, create a migration with `npm run db:migrate:dev`.
 
 ```powershell
 cd frontend
@@ -68,14 +70,14 @@ The full knowledge base is server-side AI context. There is no knowledge-base or
 
 ```text
 frontend/   React + TypeScript + Vite + Tailwind + TanStack Query
-backend/    Express + TypeScript + Zod + Prisma + SQLite
+backend/    Express + TypeScript + Zod + Prisma + PostgreSQL
             REST /api/v1 + role-scoped SSE
             Server-only Groq client, prompts, retrieval, rules and templates
 ```
 
 React keeps remote data in TanStack Query; live events invalidate affected queries. Express handles authentication, role checks and validation before service work. Prisma models users, authors, books, tickets, messages, ticket events and actual AI usage.
 
-SQLite keeps the assignment easy to run locally. PostgreSQL would suit a shared production deployment; that requires changing the Prisma provider and preparing migrations, not just changing the database URL.
+Data lives in PostgreSQL through Prisma. The schema is versioned as migrations, so `npm run db:migrate` (`prisma migrate deploy`) brings any environment to the current schema.
 
 Passwords are hashed with bcrypt. Protected API requests require a JWT and enforce author ownership on the server. Staff-only operations reject author sessions. The browser stores the session token locally; the native EventSource connection passes it as a query parameter, which application request logs redact. Environment files and local databases are ignored by Git.
 
@@ -133,7 +135,7 @@ npm test
 npm run build
 ```
 
-The backend suite creates and seeds temporary databases, leaving the development database untouched. It covers all sample records, ownership/RBAC, validation, fallback AI, concurrent submissions, drafts, overrides, assignment, private notes, lifecycle, pagination beyond 500 tickets, overdue counts and scoped live events.
+The backend API suite needs PostgreSQL: it uses `TEST_DATABASE_URL`, falling back to `DATABASE_URL`, migrates and seeds a temporary schema there, then drops that schema, leaving existing data untouched. It covers all sample records, ownership/RBAC, validation, fallback AI, concurrent submissions, drafts, overrides, assignment, private notes, lifecycle, pagination beyond 500 tickets, overdue counts and scoped live events.
 
 ```powershell
 cd frontend
@@ -165,5 +167,5 @@ Known limits:
 - The supplied dataset has aggregate sales/royalties, without per-platform transaction figures. No platform breakdown is fabricated.
 - Demo support conversations are synthetic; production stages derive from book status. The seed does not invent bank details, paid-package membership or production delay explanations.
 - AI suggestions need staff review and cannot guarantee classification or response accuracy. External actions described in a reply require staff to carry them out.
-- SQLite, caches and SSE subscribers are local to one backend instance. Production scaling needs a shared database/event transport, durable job handling and missed-event recovery.
+- Caches and SSE subscribers are local to one backend instance. Production scaling needs a shared database/event transport, durable job handling and missed-event recovery.
 - Session expiry, password recovery and token revocation need a fuller production authentication flow.

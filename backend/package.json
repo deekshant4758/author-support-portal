@@ -11,10 +11,11 @@
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.mts",
     "prisma:generate": "prisma generate",
-    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
     "db:seed": "tsx src/seed.ts",
-    "db:reset": "prisma db push --force-reset && tsx src/seed.ts",
-    "setup": "prisma generate && prisma db push && tsx src/seed.ts"
+    "db:reset": "prisma migrate reset --force --skip-seed && tsx src/seed.ts",
+    "setup": "prisma generate && prisma migrate deploy && tsx src/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.7.0",

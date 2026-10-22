@@ -1,14 +1,13 @@
 // BookLeaf Author Support Portal - data model
-// SQLite is used for a zero-setup local/demo experience. The schema is
-// provider-agnostic (no SQLite-only features), so switching DATABASE_URL to
-// Postgres only requires changing `provider` below and re-running migrations.
+// PostgreSQL, configured through DATABASE_URL. Schema changes ship as
+// migrations in prisma/migrations (create new ones with `npm run db:migrate:dev`).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

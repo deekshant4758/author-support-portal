@@ -8,7 +8,7 @@ const start = async () => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error(
-      'Could not connect to the database. Run `npm run setup` inside backend/ first.\n',
+      'Could not connect to PostgreSQL. Check DATABASE_URL in backend/.env, then run `npm run setup` (fresh database) or `npm run db:migrate` inside backend/.\n',
       error,
     );
     process.exit(1);

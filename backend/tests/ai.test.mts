@@ -6,12 +6,9 @@
  */
 import assert from 'node:assert/strict';
 import { after, afterEach, test } from 'node:test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
 
-const testDirectory = await mkdtemp(join(tmpdir(), 'bookleaf-ai-test-'));
-process.env.DATABASE_URL = `file:${join(testDirectory, 'usage.db').replaceAll('\\', '/')}`;
+// Usage logging is stubbed below, so this URL only has to pass env validation.
+process.env.DATABASE_URL = 'postgresql://unused:unused@127.0.0.1:5432/unused';
 process.env.NODE_ENV = 'test';
 process.env.GROQ_API_KEY = 'test-key';
 process.env.AI_ENABLED = 'true';
@@ -25,9 +22,6 @@ prisma.aiUsage.create = async () => ({}) as never;
 
 after(async () => {
   await prisma.$disconnect();
-  assert.equal(dirname(resolve(testDirectory)), resolve(tmpdir()));
-  assert.ok(basename(testDirectory).startsWith('bookleaf-ai-test-'));
-  await rm(testDirectory, { recursive: true, force: true });
 });
 
 const realFetch = global.fetch;
