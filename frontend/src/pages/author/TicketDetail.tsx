@@ -3,9 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import clsx from 'clsx';
 import { api, ApiError } from '../../lib/api';
-
 import { useToast } from '../../store/toast';
-import { Avatar, Card, ErrorState, Modal, Spinner, StatusPill } from '../../components/ui';
+import { Avatar, Card, ErrorState, Spinner, StatusPill } from '../../components/ui';
 import { Icon } from '../../components/Icon';
 import { formatDateTime } from '../../lib/format';
 
@@ -20,10 +19,8 @@ const TicketThread = ({ id }: { id: string }) => {
 
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
-  const [closing, setClosing] = useState(false);
-  const [confirmClose, setConfirmClose] = useState(false);
+
   const [error, setError] = useState<string | null>(null);
-  const [reopening, setReopening] = useState(false);
   const chatBox = useRef<HTMLDivElement>(null);
   const {
     data: ticket,
@@ -56,33 +53,6 @@ const TicketThread = ({ id }: { id: string }) => {
       setError(caught instanceof ApiError ? caught.message : 'Your reply could not be sent.');
     } finally {
       setSending(false);
-    }
-  };
-  const close = async () => {
-    if (closing) return;
-    setClosing(true);
-    try {
-      await api.tickets.close(id);
-      await refresh();
-      setConfirmClose(false);
-      push('Ticket closed.', 'success');
-    } catch (caught) {
-      push(caught instanceof ApiError ? caught.message : 'Could not close the ticket.', 'error');
-    } finally {
-      setClosing(false);
-    }
-  };
-  const reopen = async () => {
-    if (reopening) return;
-    setReopening(true);
-    try {
-      await api.tickets.reopen(id);
-      await refresh();
-      push('Ticket reopened.', 'success');
-    } catch (caught) {
-      push(caught instanceof ApiError ? caught.message : 'Could not reopen the ticket.', 'error');
-    } finally {
-      setReopening(false);
     }
   };
   if (isLoading) return <div className="skeleton h-96 rounded-xl" />;
@@ -143,22 +113,16 @@ const TicketThread = ({ id }: { id: string }) => {
         <div className="border-t border-[#E2E8F0] p-5">
           {closed ? (
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-body-sm text-[#64748b]">This ticket is closed.</p>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" className="btn-secondary" disabled={reopening} onClick={() => void reopen()}>
-                  {reopening ? <Spinner className="h-4 w-4" /> : null}
-                  Reopen ticket
-                </button>
-                <Link to="/app/tickets/new" className="btn-primary">
-                  Raise a new query
-                </Link>
-              </div>
+              <p className="text-body-sm text-[#64748b]">This ticket has been closed by the BookLeaf team.</p>
+              <Link to="/app/tickets/new" className="btn-primary">
+                Raise a new query
+              </Link>
             </div>
           ) : (
             <>
               {ticket.status === 'RESOLVED' ? (
                 <p className="mb-3 text-body-sm text-[#475569]">
-                  Your query is marked resolved. Reply if you need more help, or close the ticket.
+                  Your query is marked resolved. Reply if you still need help and the team will pick it up again.
                 </p>
               ) : null}
               <label htmlFor="reply" className="field-label">
@@ -184,10 +148,7 @@ const TicketThread = ({ id }: { id: string }) => {
                   {error}
                 </p>
               ) : null}
-              <div className="mt-3 flex flex-wrap justify-between gap-3">
-                <button type="button" className="btn-secondary" onClick={() => setConfirmClose(true)}>
-                  Close ticket
-                </button>
+              <div className="mt-3 flex flex-wrap justify-end gap-3">
                 <button
                   type="button"
                   disabled={!reply.trim() || sending}
@@ -202,19 +163,6 @@ const TicketThread = ({ id }: { id: string }) => {
           )}
         </div>
       </Card>
-      <Modal open={confirmClose} onClose={() => setConfirmClose(false)} title="Close this ticket?">
-        <p className="text-body-sm text-[#64748b]">
-          Close the ticket if your query is answered. You can submit a new query if you need help later.
-        </p>
-        <div className="mt-5 flex justify-end gap-3">
-          <button type="button" className="btn-secondary" onClick={() => setConfirmClose(false)}>
-            Cancel
-          </button>
-          <button type="button" className="btn-primary" disabled={closing} onClick={() => void close()}>
-            {closing ? 'Closing…' : 'Close ticket'}
-          </button>
-        </div>
-      </Modal>
     </div>
   );
 };

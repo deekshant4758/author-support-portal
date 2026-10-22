@@ -6,7 +6,7 @@ import { AiError, callGroq } from './groqClient';
 import { TtlCache, hashKey } from './cache';
 import { templateDraft } from './fallback';
 import { retrieveKnowledge } from './knowledgeBase';
-import { buildDraftMessages } from './prompts';
+import { authorFirstName, buildDraftMessages } from './prompts';
 import { estimateCostUsd, recordAiUsage } from './usage';
 
 export type DraftTone = 'EMPATHETIC' | 'CONCISE' | 'ESCALATION';
@@ -40,10 +40,11 @@ export interface DraftResult {
 /** Short TTL: regeneration reuses spend only while the ticket is unchanged. */
 const draftCache = new TtlCache<DraftResult>(15 * 60 * 1000, 100);
 
-const cleanDraft = (raw: string): string =>
+/** Safety net: swap any leftover name placeholder for the real first name. */
+const cleanDraft = (raw: string, firstName: string): string =>
   raw
     .replace(/^subject:.*\n/i, '')
-    .replace(/\[(author|your)\s*name\]/gi, '')
+    .replace(/[[<{]\s*(author'?s?\s*)?(first\s*|full\s*)?name\s*[\]>}]/gi, firstName)
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
@@ -61,7 +62,7 @@ export const generateDraft = async (
 
   const cacheKey = hashKey(
     [
-      'draft',
+      'draft-v2',
       context.ticket.id,
       context.ticket.priority,
       context.ticket.category,
@@ -147,7 +148,7 @@ export const generateDraft = async (
       temperature: 0.4,
     });
 
-    const body = cleanDraft(completion.content);
+    const body = cleanDraft(completion.content, authorFirstName(context.authorName));
     if (body.length < 40) throw new AiError('Draft was too short to be useful.', 502, true);
 
     const result: DraftResult = {

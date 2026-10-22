@@ -416,7 +416,7 @@ export const openApiSpec = {
       post: {
         tags: ['Tickets'],
         summary: 'Close a ticket',
-        description: 'Available to the owning author or an admin.',
+        description: 'Admin only.',
         parameters: [ticketIdParam],
         responses: {
           200: dataResponse({ $ref: '#/components/schemas/Ticket' }),
@@ -429,7 +429,7 @@ export const openApiSpec = {
       post: {
         tags: ['Tickets'],
         summary: 'Reopen a closed or resolved ticket',
-        description: 'Available to the owning author or an admin. The ticket returns to OPEN.',
+        description: 'Admin only. The ticket returns to OPEN.',
         parameters: [ticketIdParam],
         responses: {
           200: dataResponse({ $ref: '#/components/schemas/Ticket' }),

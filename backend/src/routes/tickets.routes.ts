@@ -492,6 +492,7 @@ ticketsRouter.post(
 
 ticketsRouter.post(
   '/:id/close',
+  requireAdmin,
   validate(idParamSchema, 'params'),
   asyncHandler(async (req, res) => {
     const ticket = await prisma.ticket.findFirst({
@@ -499,9 +500,7 @@ ticketsRouter.post(
     });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
-    if (req.user!.role !== 'ADMIN' && ticket.authorId !== req.user!.authorId) {
-      throw forbidden('You can only close your own support tickets.');
-    }
+
     if (ticket.status === 'CLOSED') throw conflict('This ticket is already closed.');
 
     const updated = await prisma.ticket.update({
@@ -514,7 +513,7 @@ ticketsRouter.post(
             actorId: req.user!.id,
             actorName: req.user!.name,
             type: 'CLOSED',
-            description: `Ticket closed by ${req.user!.role === 'ADMIN' ? 'operations' : 'the author'}.`,
+            description: 'Ticket closed by operations.',
           },
         },
       },
@@ -533,9 +532,10 @@ ticketsRouter.post(
   }),
 );
 
-/** Reopen a closed or resolved ticket. Admins, or the author who owns it. */
+/** Admin-only: reopen a closed or resolved ticket. */
 ticketsRouter.post(
   '/:id/reopen',
+  requireAdmin,
   validate(idParamSchema, 'params'),
   asyncHandler(async (req, res) => {
     const ticket = await prisma.ticket.findFirst({
@@ -543,9 +543,7 @@ ticketsRouter.post(
     });
     if (!ticket) throw notFound('That support ticket does not exist.');
 
-    if (req.user!.role !== 'ADMIN' && ticket.authorId !== req.user!.authorId) {
-      throw forbidden('You can only reopen your own support tickets.');
-    }
+
     if (ticket.status !== 'CLOSED' && ticket.status !== 'RESOLVED') {
       throw conflict('Only closed or resolved tickets can be reopened.');
     }
@@ -561,7 +559,7 @@ ticketsRouter.post(
             actorId: req.user!.id,
             actorName: req.user!.name,
             type: 'REOPENED',
-            description: `Ticket reopened by ${req.user!.role === 'ADMIN' ? 'operations' : 'the author'}.`,
+            description: 'Ticket reopened by operations.',
             metadata: JSON.stringify({ from: ticket.status, to: 'OPEN' }),
           },
         },

@@ -29,8 +29,6 @@ const TicketWorkspace = ({ id }: { id: string }) => {
   const [fallback, setFallback] = useState(false);
   const [sending, setSending] = useState(false);
   const [updating, setUpdating] = useState(false);
-  const draftEdited = useRef(false);
-  const initialDraft = useRef<ReturnType<typeof api.tickets.draft> | null>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
   const chatBox = useRef<HTMLDivElement>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -42,35 +40,6 @@ const TicketWorkspace = ({ id }: { id: string }) => {
   });
   const { data: ticket } = ticketQuery;
   const { data: team } = useQuery({ queryKey: ['admin-team'], queryFn: api.admin.team });
-
-  // Keep the initial request across StrictMode effect replays. Never replace an edited draft.
-  useEffect(() => {
-    if (!ticket) return;
-    let active = true;
-    initialDraft.current ??= api.tickets.draft(id, { tone: 'EMPATHETIC', includeHistory: true });
-    setGenerating(true);
-    void initialDraft.current
-      .then((result) => {
-        if (active && !draftEdited.current) {
-          setDraft(result.draft);
-          setFallback(result.meta.source === 'TEMPLATE');
-        }
-      })
-      .catch((caught) => {
-        if (active)
-          setDraftError(
-            caught instanceof ApiError
-              ? caught.message
-              : 'The suggested reply could not be loaded. You can write a reply below.',
-          );
-      })
-      .finally(() => {
-        if (active) setGenerating(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [ticket?.id, id]);
 
   const refresh = async () => {
     await Promise.all(
@@ -89,7 +58,7 @@ const TicketWorkspace = ({ id }: { id: string }) => {
     try {
       await api.tickets.update(id, payload);
       await refresh();
-      push('Ticket updated.', 'success');
+      push(payload.status === 'CLOSED' ? 'Ticket closed.' : 'Ticket updated.', 'success');
     } catch (caught) {
       push(caught instanceof ApiError ? caught.message : 'The ticket could not be updated.', 'error');
     } finally {
@@ -121,7 +90,6 @@ const TicketWorkspace = ({ id }: { id: string }) => {
       });
       setDraft(result.draft);
       setFallback(result.meta.source === 'TEMPLATE');
-      draftEdited.current = false;
     } catch (caught) {
       setDraftError(
         caught instanceof ApiError
@@ -190,7 +158,16 @@ const TicketWorkspace = ({ id }: { id: string }) => {
               {reopening ? <Spinner className="h-4 w-4" /> : <Icon name="replay" className="text-[17px]" />}
               Reopen
             </button>
-          ) : null}
+          ) : (
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={updating}
+              onClick={() => void update({ status: 'CLOSED' })}
+            >
+              <Icon name="task_alt" className="text-[17px]" /> Close ticket
+            </button>
+          )}
           <button type="button" className="btn-primary" onClick={() => setDetailsOpen(true)}>
             <Icon name="edit" className="text-[17px]" /> Edit details
           </button>
@@ -339,87 +316,95 @@ const TicketWorkspace = ({ id }: { id: string }) => {
           </details>
         </div>
         <Card className="p-5 xl:sticky xl:top-20">
-          <h2 className="text-headline-sm text-ink">Suggested reply</h2>
+          <div className="flex items-center gap-2">
+            <Icon name="auto_awesome" className="text-[20px] text-ai" />
+            <h2 className="text-headline-sm text-ink">Generate response with AI</h2>
+          </div>
           <p className="mt-1 text-body-sm text-[#64748b]">
-            Based on the full conversation. Review and edit before sending.
+            Pick a tone and add any guidance, then generate. The draft uses the full conversation and the
+            author&apos;s account details. Nothing is sent until you send it.
           </p>
-          {fallback ? (
-            <p className="mt-3 text-body-sm text-[#B45309]">
-              AI is unavailable. A standard reply is ready to edit.
-            </p>
-          ) : null}
+          <label className="mt-4 block">
+            <span className="field-label">Tone</span>
+            <select
+              aria-label="Tone"
+              value={tone}
+              onChange={(event) => setTone(event.target.value as Tone)}
+              disabled={generating}
+              className="input"
+            >
+              <option value="EMPATHETIC">Empathetic</option>
+              <option value="CONCISE">Concise</option>
+              <option value="ESCALATION">Escalation</option>
+            </select>
+          </label>
+          <label htmlFor="draft-guidance" className="field-label mt-3">
+            Your input (optional)
+          </label>
+          <textarea
+            id="draft-guidance"
+            value={instructions}
+            onChange={(event) => setInstructions(event.target.value)}
+            maxLength={500}
+            rows={3}
+            disabled={generating}
+            className="input resize-y"
+            placeholder="e.g. Confirm the reprint is approved and ask for the delivery address."
+          />
+          <p className="mt-1 text-right text-[11px] text-[#94A3B8]">{instructions.length}/500</p>
+          <button
+            type="button"
+            onClick={() => void regenerate()}
+            disabled={generating}
+            className="btn-primary mt-2 w-full justify-center"
+          >
+            {generating ? <Spinner className="h-4 w-4" /> : <Icon name="auto_awesome" className="text-[17px]" />}
+            {generating ? 'Generating draft…' : draft ? 'Generate again' : 'Generate draft'}
+          </button>
           {draftError ? (
             <p role="alert" className="mt-3 text-body-sm text-danger">
               {draftError}
             </p>
           ) : null}
-          <label htmlFor="draft-editor" className="field-label mt-4">
-            Draft
-          </label>
-          <textarea
-            id="draft-editor"
-            value={draft}
-            onChange={(event) => {
-              draftEdited.current = true;
-              setDraft(event.target.value);
-            }}
-            rows={16}
-            maxLength={5000}
-            className="input resize-y"
-            placeholder={generating ? 'Preparing a reply…' : 'Write or generate a suggested reply.'}
-          />
-          <div className="mt-3 flex flex-wrap justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => void regenerate()}
-              disabled={generating}
-              className="btn-secondary"
-            >
-              {generating ? <Spinner className="h-4 w-4" /> : null}
-              {generating ? 'Preparing reply…' : 'Generate reply'}
-            </button>
-            <button
-              type="button"
-              disabled={!draft.trim()}
-              className="btn-primary"
-              onClick={() => {
-                setReply(draft);
-                setInternal(false);
-                composer.current?.focus();
-                composer.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }}
-            >
-              Use in reply
-            </button>
-          </div>
-          <details className="mt-4 border-t border-[#E2E8F0] pt-4">
-            <summary className="cursor-pointer text-body-sm text-[#64748b]">Adjust draft</summary>
-            <label className="mt-3 block">
-              <span className="field-label">Tone</span>
-              <select
-                aria-label="Tone"
-                value={tone}
-                onChange={(event) => setTone(event.target.value as Tone)}
-                className="input"
-              >
-                <option value="EMPATHETIC">Empathetic</option>
-                <option value="CONCISE">Concise</option>
-                <option value="ESCALATION">Escalation</option>
-              </select>
-            </label>
-            <label className="mt-3 block">
-              <span className="field-label">Instructions (optional)</span>
-              <input
-                value={instructions}
-                onChange={(event) => setInstructions(event.target.value)}
-                maxLength={500}
-                className="input"
+          {draft || generating ? (
+            <div className="mt-5 border-t border-[#E2E8F0] pt-4">
+              {fallback ? (
+                <p className="mb-3 text-body-sm text-[#B45309]">
+                  AI is unavailable. A standard reply is ready to edit.
+                </p>
+              ) : null}
+              <label htmlFor="draft-editor" className="field-label">
+                Suggested reply
+              </label>
+              <textarea
+                id="draft-editor"
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                rows={14}
+                maxLength={5000}
+                disabled={generating}
+                className="input resize-y"
+                placeholder="Preparing a reply…"
               />
-            </label>
-          </details>
+              <div className="mt-3 flex justify-end">
+                <button
+                  type="button"
+                  disabled={!draft.trim() || generating}
+                  className="btn-primary"
+                  onClick={() => {
+                    setReply(draft);
+                    setInternal(false);
+                    composer.current?.focus();
+                    composer.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }}
+                >
+                  Use in reply
+                </button>
+              </div>
+            </div>
+          ) : null}
         </Card>
-      </div>
-      <Modal
+      </div>      <Modal
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
         title="Ticket details"

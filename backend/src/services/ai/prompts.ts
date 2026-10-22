@@ -41,7 +41,8 @@ VOICE AND STRUCTURE
 - If information is missing, ask for the minimum needed (photos, bank details confirmation, listing link) instead of guessing.
 - End with one clear next step for the author and/or the BookLeaf team.
 - Write 120-220 words unless the author's issue genuinely needs more detail.
-- Plain text email body only. Start with "Hi <first name>," and end with "Warmly,\\nBookLeaf Author Support". No subject line, no markdown headings, no placeholders like [Name], no mention of AI.
+- Plain text email body only. The first line must be exactly the GREETING given in the context (it already contains the author's real first name). End with "Warmly,\\nBookLeaf Author Support". No subject line, no markdown headings, no mention of AI.
+- Never output placeholders or template slots of any kind, such as [Name], [first name], <first name>, {author}, [date] or [amount]. If a value is not in the context, write the sentence without it.
 - When a conversation is already in progress, write the next message in that thread: answer what the author asked most recently, keep continuity with earlier support replies, and keep it shorter than a first reply (60-150 words).
 
 GROUNDING RULES
@@ -115,17 +116,26 @@ const TONE_GUIDE: Record<DraftPromptContext['tone'], string> = {
 const money = (value: number | null | undefined) =>
   value == null ? 'not applicable' : `₹${value.toLocaleString('en-IN')}`;
 
+export const authorFirstName = (name: string) => name.trim().split(/\s+/)[0] || 'there';
+
 const buildAccountFacts = (context: DraftPromptContext): string => {
   const { book, ticket } = context;
+  const author = [
+    `Author full name: ${context.authorName}`,
+    `Author first name: ${authorFirstName(context.authorName)}`,
+    context.authorTier ? `Author package: ${context.authorTier}` : '',
+    context.authorCity ? `Author city: ${context.authorCity}` : '',
+  ].filter(Boolean);
   if (!book) {
     return [
+      ...author,
       `Query scope: general / account-level`,
       `Ticket reference: ${ticket.publicId}`,
-      `Author: ${context.authorName}`,
     ].join('\n');
   }
 
   const facts = [
+    ...author,
     `Title: ${book.title}`,
     `ISBN: ${book.isbn}`,
     `Genre: ${book.genre}`,
@@ -167,6 +177,8 @@ export const buildDraftMessages = (context: DraftPromptContext): ChatMessage[] =
       : 'BookLeaf support sent the most recent message. Write a short follow-up that continues from it (for example a status update or check-in). Do not repeat what was already said.';
 
   const user = [
+    `GREETING (use exactly as the first line): Hi ${authorFirstName(context.authorName)},`,
+    '',
     'ACCOUNT FACTS (authoritative - do not contradict):',
     buildAccountFacts(context),
     '',
@@ -183,7 +195,9 @@ export const buildDraftMessages = (context: DraftPromptContext): ChatMessage[] =
     renderKnowledge(context.sections),
     '',
     `TONE: ${TONE_GUIDE[context.tone]}`,
-    context.instructions ? `ADMIN NOTE FOR THIS DRAFT: ${context.instructions}` : '',
+    context.instructions
+      ? `ADMIN GUIDANCE FOR THIS DRAFT (from the support agent; follow it as long as it does not conflict with the rules or facts above): ${context.instructions}`
+      : '',
     '',
     'Write the reply now.',
   ]

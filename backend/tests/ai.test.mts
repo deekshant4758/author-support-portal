@@ -192,6 +192,31 @@ test('draft prompt treats an ongoing thread as a follow-up to the latest author 
   assert.match(user.content, /FOLLOW-UP/);
 });
 
+test('draft prompt carries the real author name and AI placeholders are replaced', async () => {
+  const fixture = ticketFixture('Royalty pending');
+  const [, user] = buildDraftMessages({
+    ...fixture,
+    authorName: 'Priya Sharma',
+    sections: [],
+    tone: 'CONCISE',
+    includeHistory: false,
+    instructions: 'Mention the Q3 settlement date.',
+  });
+  assert.match(user.content, /GREETING .*: Hi Priya,/);
+  assert.match(user.content, /Author full name: Priya Sharma/);
+  assert.match(user.content, /ADMIN GUIDANCE .*Mention the Q3 settlement date\./);
+
+  mockCompletion(
+    'Hi [first name],\n\nThank you for your patience while finance checks the settlement for your title. We will update you within 48 hours.\n\nWarmly,\nBookLeaf Author Support',
+  );
+  const result = await generateDraft(
+    { ...fixture, authorName: 'Priya Sharma' },
+    { tone: 'CONCISE', includeHistory: false, instructions: 'placeholder-check' },
+  );
+  assert.match(result.body, /^Hi Priya,/);
+  assert.doesNotMatch(result.body, /\[first name\]/i);
+});
+
 test('template draft continues an existing conversation instead of restarting it', () => {
   const fixture = ticketFixture('Royalty pending');
   const body = templateDraft({
