@@ -308,7 +308,7 @@ export const AdminQueuePage = () => {
             />
           </Card>
         )}
-        <LoadingOverlay show={query.isFetching && !query.isLoading} label="Applying filters…" />
+        <LoadingOverlay show={query.isPlaceholderData && !query.isError} />
       </div>
     </div>
   );

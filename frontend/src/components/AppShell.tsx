@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 import { Avatar } from './ui';
 import { useAuth } from '../store/auth';
 
-import { api } from '../lib/api';
+import { api, apiDocsUrl } from '../lib/api';
 import { number } from '../lib/format';
 import type { Role } from '../lib/types';
 
@@ -148,7 +148,17 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
         </nav>
       </div>
 
-      <p className="px-4 pb-4 text-[11px] text-[#94a3b8]">BookLeaf Publishing</p>
+      <div className="flex items-center justify-between gap-2 px-4 pb-4 text-[11px] text-[#94a3b8]">
+        <span>BookLeaf Publishing</span>
+        <a
+          href={apiDocsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold transition-colors hover:text-primary"
+        >
+          API docs
+        </a>
+      </div>
     </div>
   );
 

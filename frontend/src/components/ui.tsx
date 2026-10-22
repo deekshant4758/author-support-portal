@@ -340,19 +340,20 @@ export const InlineLoader = ({ label = 'Loading…', className }: { label?: stri
 );
 
 /**
- * Covers a results region while a query refetches with `keepPreviousData`.
- * The previous rows stay visible underneath, so filters never blank the page.
+ * Covers a results region only when a *different* query key is loading with
+ * `keepPreviousData` (filters, search, pagination). A plain reload, focus
+ * refetch or live-event refresh never shows it.
  */
-export const LoadingOverlay = ({ show, label = 'Updating results…' }: { show: boolean; label?: string }) =>
+export const LoadingOverlay = ({ show }: { show: boolean }) =>
   show ? (
     <div
-      className="pointer-events-none absolute inset-0 z-20 flex animate-fade-in items-start justify-center rounded-xl bg-white/60 pt-6 backdrop-blur-[1px] sm:pt-10"
+      className="pointer-events-none absolute inset-0 z-20 animate-fade-in rounded-xl bg-white/50 backdrop-blur-[1px]"
       role="status"
       aria-live="polite"
+      aria-label="Loading results"
     >
-      <span className="flex items-center gap-2.5 rounded-full border border-[#E2E8F0] bg-white px-4 py-2 shadow-lift">
-        <Spinner className="h-4 w-4" />
-        <span className="text-label-md font-semibold text-ink">{label}</span>
+      <span className="absolute left-1/2 top-0 flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#E2E8F0] bg-white shadow-lift">
+        <Spinner className="h-5 w-5" />
       </span>
     </div>
   ) : null;

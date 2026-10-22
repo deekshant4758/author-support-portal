@@ -22,6 +22,12 @@ import type {
  * split deployment, set VITE_API_URL to the public API origin at build time.
  */
 const BASE_URL = (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/$/, '');
+
+/**
+ * Swagger UI is served by the API, not the frontend host. `VITE_API_URL`
+ * includes `/api/v1`, so strip that suffix to reach `/api/docs/`.
+ */
+export const apiDocsUrl = `${BASE_URL.replace(/\/api\/v1$/, '')}/api/docs/`;
 const TOKEN_KEY = 'bookleaf.token';
 
 export class ApiError extends Error {
@@ -58,7 +64,13 @@ async function request<T>(
 
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+    response = await fetch(`${BASE_URL}${path}`, {
+      ...options,
+      headers,
+      // Always hit the network: a cached 304 on session restore has no body
+      // and would otherwise look like a failed request.
+      cache: 'no-store',
+    });
   } catch {
     throw new ApiError(
       0,

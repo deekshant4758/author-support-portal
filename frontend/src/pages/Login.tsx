@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { ApiError } from '../lib/api';
+import { ApiError, apiDocsUrl } from '../lib/api';
 import { homeFor, useAuth } from '../store/auth';
 import { Icon } from '../components/Icon';
 import { BookCover } from '../components/BookCover';
@@ -104,9 +104,17 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        <p className="relative border-t border-white/10 pt-5 text-body-sm text-white/60">
-          BookLeaf Publishing · Author support
-        </p>
+        <div className="relative flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-5 text-body-sm text-white/60">
+          <span>BookLeaf Publishing · Author support</span>
+          <a
+            href={apiDocsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold text-white/80 underline-offset-4 transition-colors hover:text-white hover:underline"
+          >
+            API documentation
+          </a>
+        </div>
       </div>
 
       {/* Sign-in panel */}
