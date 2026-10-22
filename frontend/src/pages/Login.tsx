@@ -75,13 +75,17 @@ export const LoginPage = () => {
             Every author question, answered with care and precision.
           </h1>
           <p className="mt-4 max-w-md text-body-lg text-white/65">
-            Royalties, ISBNs, print runs and distribution — one support desk, grounded in real
-            publishing policy and built to respond fast.
+            Track your books and royalties, ask a question, and keep every reply in one place.
           </p>
 
           <div className="mt-9 flex items-end gap-4">
             <div className="w-[92px] rotate-[-4deg]">
-              <BookCover title="Whispers of the Ganges" author="Priya Sharma" genre="Literary Fiction" compact />
+              <BookCover
+                title="Whispers of the Ganges"
+                author="Priya Sharma"
+                genre="Literary Fiction"
+                compact
+              />
             </div>
             <div className="w-[104px] translate-y-[-10px] rotate-[2deg]">
               <BookCover title="Startup Sutra" author="Rohit Kapoor" genre="Business" compact />
@@ -90,7 +94,9 @@ export const LoginPage = () => {
               <BookCover title="Midnight in Mysore" author="Sneha Kulkarni" genre="Thriller" compact />
             </div>
             <div className="mb-1 hidden xl:block">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#85f8c4]">22,000+ titles</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#85f8c4]">
+                22,000+ titles
+              </p>
               <p className="mt-1 max-w-[120px] text-[12px] leading-relaxed text-white/50">
                 Published across India and the US.
               </p>
@@ -98,17 +104,9 @@ export const LoginPage = () => {
           </div>
         </div>
 
-        <div className="relative flex items-center gap-6 border-t border-white/10 pt-5 text-[11px] text-white/45">
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="bolt" className="text-[15px] text-[#85f8c4]" /> AI-assisted triage
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="verified" className="text-[15px] text-[#85f8c4]" /> Policy-grounded drafts
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Icon name="sync" className="text-[15px] text-[#85f8c4]" /> Live thread updates
-          </span>
-        </div>
+        <p className="relative border-t border-white/10 pt-5 text-body-sm text-white/60">
+          BookLeaf Publishing · Author support
+        </p>
       </div>
 
       {/* Sign-in panel */}
@@ -190,7 +188,10 @@ export const LoginPage = () => {
             </div>
 
             {error ? (
-              <div role="alert" className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-soft px-3.5 py-3 text-body-sm text-danger-deep animate-fade-up">
+              <div
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-soft px-3.5 py-3 text-body-sm text-danger-deep animate-fade-up"
+              >
                 <Icon name="error" className="mt-0.5 text-[17px]" />
                 <span>{error}</span>
               </div>

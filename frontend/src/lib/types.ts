@@ -127,6 +127,7 @@ export interface TicketDetail extends Ticket {
 
 export interface AuthorSummary {
   author: AuthorProfile;
+  books: Book[];
   metrics: {
     bookCount: number;
     publishedCount: number;
@@ -209,11 +210,10 @@ export interface TeamMember {
   assignedCount: number;
 }
 
-export interface KnowledgeSection {
+export interface SupportAnswer {
   id: string;
-  title: string;
-  categories: TicketCategory[];
-  content: string;
+  question: string;
+  answer: string;
 }
 
 export interface PageMeta {
@@ -252,18 +252,19 @@ interface LiveEventBase {
   at?: string;
 }
 
-export type LiveEvent = LiveEventBase & (
-  | {
-      type: 'ticket.message';
-      data: {
-        message: Message;
-        status: TicketStatus;
-        firstResponseAt: string | null;
-        lastMessageAt: string;
-      };
-    }
-  | {
-      type: 'connected' | 'ticket.created' | 'ticket.updated' | 'ticket.closed' | 'heartbeat';
-      data?: unknown;
-    }
-);
+export type LiveEvent = LiveEventBase &
+  (
+    | {
+        type: 'ticket.message';
+        data: {
+          message: Message;
+          status: TicketStatus;
+          firstResponseAt: string | null;
+          lastMessageAt: string;
+        };
+      }
+    | {
+        type: 'connected' | 'ticket.created' | 'ticket.updated' | 'ticket.closed' | 'heartbeat';
+        data?: unknown;
+      }
+  );

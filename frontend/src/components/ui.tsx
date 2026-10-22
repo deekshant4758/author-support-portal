@@ -104,13 +104,7 @@ export const CategoryPill = ({
   </MetadataLabel>
 );
 
-export const SourcePill = ({
-  source,
-  confidence,
-}: {
-  source: TriageSource;
-  confidence?: number | null;
-}) => {
+export const SourcePill = ({ source, confidence }: { source: TriageSource; confidence?: number | null }) => {
   const config: Record<TriageSource, { label: string; icon: string }> = {
     AI: { label: 'AI', icon: 'auto_awesome' },
     HEURISTIC: {
@@ -131,13 +125,7 @@ export const SourcePill = ({
 
 export const SlaPill = ({ minutes, breached }: { minutes: number; breached: boolean }) => (
   <MetadataLabel
-    className={clsx(
-      breached
-        ? '!text-danger-deep font-semibold'
-        : minutes < 120
-          ? '!text-[#B45309]'
-          : '',
-    )}
+    className={clsx(breached ? '!text-danger-deep font-semibold' : minutes < 120 ? '!text-[#B45309]' : '')}
     icon={breached ? 'alarm' : 'schedule'}
   >
     {slaText(minutes, breached)}
@@ -145,6 +133,47 @@ export const SlaPill = ({ minutes, breached }: { minutes: number; breached: bool
 );
 
 /* ------------------------------------------------------------------ layout */
+
+export const Pagination = ({
+  page,
+  pages,
+  total,
+  disabled,
+  onChange,
+}: {
+  page: number;
+  pages: number;
+  total: number;
+  disabled?: boolean;
+  onChange: (page: number) => void;
+}) => (
+  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E2E8F0] p-4 text-body-sm text-[#64748b]">
+    <span>
+      {total} {total === 1 ? 'ticket' : 'tickets'}
+      {pages > 1 ? ` · Page ${page} of ${pages}` : ''}
+    </span>
+    {pages > 1 ? (
+      <div className="flex gap-2">
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={disabled || page <= 1}
+          onClick={() => onChange(page - 1)}
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={disabled || page >= pages}
+          onClick={() => onChange(page + 1)}
+        >
+          Next
+        </button>
+      </div>
+    ) : null}
+  </div>
+);
 
 export const Avatar = ({
   name,
@@ -226,7 +255,9 @@ export const MetricCard = ({
       {trailing ?? (icon ? <Icon name={icon} className="text-[19px] text-[#94a3b8]" /> : null)}
     </div>
     <div className="mt-4">
-      <div className={clsx('text-[1.65rem] font-bold leading-none tracking-tight tabular', accent)}>{value}</div>
+      <div className={clsx('text-[1.65rem] font-bold leading-none tracking-tight tabular', accent)}>
+        {value}
+      </div>
       {hint ? <p className="mt-2 text-body-sm text-[#64748b]">{hint}</p> : null}
     </div>
   </div>
@@ -246,7 +277,10 @@ export const ProgressBar = ({
   const pct = max <= 0 ? 0 : Math.min(100, Math.max(0, (value / max) * 100));
   return (
     <div className={clsx('h-1.5 w-full overflow-hidden rounded-full bg-[#E5EEFF]', className)}>
-      <div className={clsx('h-full rounded-full transition-all', barClassName)} style={{ width: `${pct}%` }} />
+      <div
+        className={clsx('h-full rounded-full transition-all', barClassName)}
+        style={{ width: `${pct}%` }}
+      />
     </div>
   );
 };
@@ -441,7 +475,9 @@ export const Tabs = <T extends string>({
   onChange: (next: T) => void;
   className?: string;
 }) => (
-  <div className={clsx('flex gap-1 overflow-x-auto rounded-lg border border-[#E2E8F0] bg-white p-1', className)}>
+  <div
+    className={clsx('flex gap-1 overflow-x-auto rounded-lg border border-[#E2E8F0] bg-white p-1', className)}
+  >
     {options.map((option) => (
       <button
         key={option.value}

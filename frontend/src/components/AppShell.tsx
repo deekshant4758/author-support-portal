@@ -44,10 +44,7 @@ const LiveChip = ({ status }: { status: 'connecting' | 'live' | 'offline' }) => 
 
   return (
     <span
-      className={clsx(
-        'hidden items-center gap-1.5 text-label-sm sm:inline-flex',
-        config.className,
-      )}
+      className={clsx('hidden items-center gap-1.5 text-label-sm sm:inline-flex', config.className)}
       title={status === 'live' ? 'Real-time updates connected' : 'Real-time updates are reconnecting'}
     >
       <span className={clsx('h-1.5 w-1.5 rounded-full', config.dot, status === 'live' && 'animate-pulse')} />
@@ -81,15 +78,23 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
 
   const nav: NavItem[] = isAdmin
     ? [
-        { to: '/admin/queue', label: 'Ticket Queue', icon: 'inbox_customize', badge: stats?.totals.unresolved },
-        { to: '/admin/analytics', label: 'AI & Analytics', icon: 'insights' },
-        { to: '/admin/knowledge-base', label: 'Knowledge Base', icon: 'menu_book' },
+        {
+          to: '/admin/queue',
+          label: 'Ticket Queue',
+          icon: 'inbox_customize',
+          badge: stats?.totals.unresolved,
+        },
       ]
     : [
         { to: '/app/dashboard', label: 'Overview', icon: 'space_dashboard', exact: true },
         { to: '/app/books', label: 'My Books', icon: 'auto_stories' },
         { to: '/app/tickets/new', label: 'Submit Query', icon: 'rate_review', exact: true },
-        { to: '/app/tickets', label: 'My Tickets', icon: 'mark_email_unread', badge: summary?.metrics.openTickets },
+        {
+          to: '/app/tickets',
+          label: 'My Tickets',
+          icon: 'mark_email_unread',
+          badge: summary?.metrics.openTickets,
+        },
       ];
 
   const isActive = (item: NavItem) => {
@@ -139,7 +144,10 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
                     : 'text-[#475569] hover:bg-[#F1F5F9] hover:text-ink',
                 )}
               >
-                <Icon name={item.icon} className={clsx('text-[20px]', active ? 'text-white' : 'text-[#64748b]')} />
+                <Icon
+                  name={item.icon}
+                  className={clsx('text-[20px]', active ? 'text-white' : 'text-[#64748b]')}
+                />
                 <span className="flex-1">{item.label}</span>
                 {item.badge != null && item.badge > 0 ? (
                   <span
@@ -155,45 +163,9 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
             );
           })}
         </nav>
-
-        <div className="my-5 h-px bg-[#E2E8F0]" />
-
-        <div className="space-y-2 px-1">
-          <p className="px-2 pb-1 text-label-sm uppercase tracking-[0.12em] text-[#94a3b8]">Resources</p>
-          <a
-            href="/api/docs"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-3 rounded-lg px-2 py-2 text-label-md text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-ink"
-          >
-            <Icon name="api" className="text-[19px] text-[#64748b]" />
-            API documentation
-            <Icon name="open_in_new" className="ml-auto text-[14px] text-[#94a3b8]" />
-          </a>
-          <a
-            href="mailto:support@bookleaf.in"
-            className="flex items-center gap-3 rounded-lg px-2 py-2 text-label-md text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-ink"
-          >
-            <Icon name="support_agent" className="text-[19px] text-[#64748b]" />
-            Contact the desk
-          </a>
-        </div>
       </div>
 
-      <div className="px-3 pb-4">
-        <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-3.5">
-          <div className="mb-1.5 flex items-center gap-1.5 text-primary">
-            <Icon name={isAdmin ? 'verified_user' : 'verified'} className="text-[16px]" filled />
-            <span className="text-label-sm font-bold">{isAdmin ? 'Operations Console' : 'Verified Imprint'}</span>
-          </div>
-          <p className="text-[11px] leading-relaxed text-[#64748b]">
-            {isAdmin
-              ? 'Internal triage console. AI output must be reviewed before it reaches an author.'
-              : 'Your books, royalties and support threads in one place. Replies sync live.'}
-          </p>
-        </div>
-        <p className="mt-3 px-1 text-[10px] text-[#94a3b8]">BookLeaf Literary Network © 2026</p>
-      </div>
+      <p className="px-4 pb-4 text-[11px] text-[#94a3b8]">BookLeaf Publishing</p>
     </div>
   );
 
@@ -232,26 +204,6 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
             <LiveChip status={status} />
-            <Link
-              to={isAdmin ? '/admin/queue' : '/app/tickets'}
-              className="relative rounded-lg p-2 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-ink"
-              aria-label="Notifications"
-            >
-              <Icon name="notifications" />
-              {(stats?.totals.unresolved ?? summary?.metrics.openTickets ?? 0) > 0 ? (
-                <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-[#F59E0B] ring-2 ring-white" />
-              ) : null}
-            </Link>
-            <a
-              href="/api/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="hidden rounded-lg p-2 text-[#475569] transition-colors hover:bg-[#F1F5F9] hover:text-ink sm:block"
-              aria-label="API documentation"
-            >
-              <Icon name="help_outline" />
-            </a>
-
             <span className="hidden h-6 w-px bg-[#E2E8F0] sm:block" />
 
             <div className="relative">
@@ -264,7 +216,9 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
               >
                 <Avatar name={user?.name ?? 'BookLeaf'} size="sm" tone={isAdmin ? 'ai' : 'primary'} />
                 <span className="hidden text-left sm:block">
-                  <span className="block text-label-md font-semibold leading-tight text-ink">{user?.name}</span>
+                  <span className="block text-label-md font-semibold leading-tight text-ink">
+                    {user?.name}
+                  </span>
                   <span className="block text-[10px] uppercase tracking-wide text-[#94a3b8]">
                     {isAdmin ? 'Operations' : 'Author'}
                   </span>
@@ -287,9 +241,6 @@ export const AppShell = ({ role, children }: { role: Role; children: ReactNode }
                     <div className="border-b border-[#E2E8F0] px-4 py-3">
                       <p className="text-label-md font-semibold text-ink">{user?.name}</p>
                       <p className="truncate text-body-sm text-[#64748b]">{user?.email}</p>
-                      <p className="mt-1 inline-flex rounded bg-[#F1F5F9] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#475569]">
-                        {isAdmin ? 'Admin · Full access' : `Author${user?.authorId ? ` · ${user.authorId}` : ''}`}
-                      </p>
                     </div>
                     <button
                       type="button"

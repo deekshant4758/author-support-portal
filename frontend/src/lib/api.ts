@@ -1,11 +1,10 @@
 import type {
   AdminStats,
-  AiUsageEntry,
   AuthorSummary,
   Book,
   CreateTicketPayload,
   DraftMeta,
-  KnowledgeSection,
+  SupportAnswer,
   LiveEvent,
   LoginResponse,
   Message,
@@ -107,7 +106,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }).then((r) => r.data),
-    me: () => request<{ user: User & { author?: AuthorSummary['author'] } }>('/auth/me').then((r) => r.data.user),
+    me: () =>
+      request<{ user: User & { author?: AuthorSummary['author'] } }>('/auth/me').then((r) => r.data.user),
     logout: () => request<void>('/auth/logout', { method: 'POST' }),
   },
 
@@ -148,7 +148,10 @@ export const api = {
         priority?: string;
         assignedToId?: string | null;
       },
-    ) => request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }).then((r) => r.data),
+    ) =>
+      request<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(payload) }).then(
+        (r) => r.data,
+      ),
     assign: (id: string, assignedToId: string | null) =>
       request<Ticket>(`/tickets/${id}/assign`, {
         method: 'POST',
@@ -165,19 +168,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(payload),
       }).then((r) => r.data),
-    reclassify: (id: string) =>
-      request<Ticket>(`/tickets/${id}/ai/reclassify`, { method: 'POST' }),
+    reclassify: (id: string) => request<Ticket>(`/tickets/${id}/ai/reclassify`, { method: 'POST' }),
   },
 
   admin: {
     stats: () => request<AdminStats>('/admin/stats').then((r) => r.data),
     team: () => request<TeamMember[]>('/admin/team').then((r) => r.data),
-    aiUsage: () =>
-      request<AiUsageEntry[]>('/admin/ai/usage?limit=50').then((r) => r.data),
   },
 
   knowledge: {
-    list: () => request<KnowledgeSection[]>('/knowledge-base').then((r) => r.data),
+    answers: () => request<SupportAnswer[]>('/knowledge-base/answers').then((r) => r.data),
   },
 };
 

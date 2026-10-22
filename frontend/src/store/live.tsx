@@ -14,12 +14,11 @@ export const LiveProvider = ({ children }: { children: ReactNode }) => {
 
   const status = useLiveEvents((event: LiveEvent) => {
     // A single invalidation path keeps every screen consistent: the queue,
-    // author lists, the open thread, dashboard metrics and AI analytics.
+    // author lists, the open thread and dashboard metrics.
     void queryClient.invalidateQueries({ queryKey: ['tickets'] });
     void queryClient.invalidateQueries({ queryKey: ['ticket'] });
     void queryClient.invalidateQueries({ queryKey: ['author-summary'] });
     void queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
-    void queryClient.invalidateQueries({ queryKey: ['admin-usage'] });
 
     if (event.type === 'ticket.created') {
       const ticket = event.data as Ticket | undefined;

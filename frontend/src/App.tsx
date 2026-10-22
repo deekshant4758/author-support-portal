@@ -11,8 +11,6 @@ import { TicketsPage } from './pages/author/Tickets';
 import { TicketDetailPage } from './pages/author/TicketDetail';
 import { AdminQueuePage } from './pages/admin/Queue';
 import { AdminTicketPage } from './pages/admin/TicketConsole';
-import { AnalyticsPage } from './pages/admin/Analytics';
-import { KnowledgeBasePage } from './pages/admin/KnowledgeBase';
 
 const RootRedirect = () => {
   const { user, loading } = useAuth();
@@ -88,8 +86,6 @@ export const App = () => (
       <Route index element={<Navigate to="/admin/queue" replace />} />
       <Route path="queue" element={<AdminQueuePage />} />
       <Route path="tickets/:id" element={<AdminTicketPage />} />
-      <Route path="analytics" element={<AnalyticsPage />} />
-      <Route path="knowledge-base" element={<KnowledgeBasePage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
 
